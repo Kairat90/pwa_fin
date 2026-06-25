@@ -22,6 +22,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data: { session } } = await supabaseApi.auth.getSession()
 
       if (session?.user) {
+        try {
+          await supabaseApi.auth.ensureProfile()
+        } catch {
+          // профиль может уже существовать
+        }
+
         setUser(supabaseApi.auth.mapUser(
           session.user.id,
           session.user.email ?? '',
@@ -51,7 +57,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string) => {
     const { user: authUser, session } = await supabaseApi.auth.signIn(email, password)
-    if (!authUser || !session) throw new Error('Ошибка авторизации')
+    if (!authUser || !session) {
+      throw new Error('Ошибка входа. Если вы только зарегистрировались — подтвердите email.')
+    }
+
+    await supabaseApi.auth.ensureProfile()
     setUser(supabaseApi.auth.mapUser(authUser.id, authUser.email ?? email, authUser.user_metadata))
   }
 
@@ -62,16 +72,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error('Не удалось создать аккаунт')
     }
 
-    // Supabase возвращает пустые identities, если email уже занят (защита от перебора)
     if (authUser.identities?.length === 0) {
       throw new Error('Пользователь с таким email уже зарегистрирован')
     }
 
-    // Подтверждение email включено — сессии нет, это не ошибка
     if (!session) {
       return { needsEmailConfirmation: true }
     }
 
+    await supabaseApi.auth.ensureProfile()
     setUser(supabaseApi.auth.mapUser(authUser.id, authUser.email ?? email, { name, ...authUser.user_metadata }))
     return { needsEmailConfirmation: false }
   }

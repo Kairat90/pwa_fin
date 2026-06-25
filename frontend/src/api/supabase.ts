@@ -13,29 +13,58 @@ import {
 } from '../types'
 import { mapKeys, toSnakeCase } from '../utils/supabaseMappers'
 
+const AUTH_CODE_MESSAGES: Record<string, string> = {
+  signup_disabled: 'Регистрация отключена. Включите Email sign ups в Supabase → Authentication → Providers',
+  email_exists: 'Пользователь с таким email уже зарегистрирован',
+  user_already_exists: 'Пользователь с таким email уже зарегистрирован',
+  weak_password: 'Слишком слабый пароль (минимум 6 символов)',
+  unexpected_failure: 'Ошибка базы данных при регистрации. Выполните SQL: migrations/20250103_fix_signup_trigger.sql',
+  over_email_send_rate_limit: 'Слишком много попыток. Подождите несколько минут',
+  email_address_invalid: 'Некорректный email',
+  validation_failed: 'Данные не прошли проверку. Проверьте email и пароль',
+  email_not_confirmed: 'Подтвердите email по ссылке из письма, затем войдите'
+}
+
+/** Форматирует ошибку Supabase Auth */
+function formatAuthError(error: { message?: string; code?: string; status?: number }): string {
+  if (error.code && AUTH_CODE_MESSAGES[error.code]) {
+    return AUTH_CODE_MESSAGES[error.code]
+  }
+
+  const msg = error.message?.trim()
+  if (msg && msg !== '{}' && msg !== '[object Object]') {
+    if (msg.includes('Database error saving new user')) {
+      return 'Ошибка создания профиля в БД. Выполните migrations/20250103_fix_signup_trigger.sql в Supabase SQL Editor'
+    }
+    if (msg.includes('redirect') || msg.includes('Redirect')) {
+      return 'URL сайта не добавлен в Supabase → Authentication → URL Configuration → Redirect URLs'
+    }
+    return msg
+  }
+
+  if (error.code) return `Ошибка авторизации: ${error.code}`
+  if (error.status) return `Ошибка сервера (${error.status})`
+  return 'Ошибка регистрации'
+}
+
 /** Сообщение об ошибке для toast */
 export function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
-    const msg = error.message?.trim()
-    if (msg && msg !== '{}' && msg !== '[object Object]') return msg
-    return error.name || 'Неизвестная ошибка'
+    const authError = error as Error & { code?: string; status?: number }
+    return formatAuthError({
+      message: authError.message,
+      code: authError.code,
+      status: authError.status
+    })
   }
 
   if (error && typeof error === 'object') {
     const e = error as Record<string, unknown>
-    if (typeof e.message === 'string' && e.message.trim()) return e.message
-    if (typeof e.error_description === 'string') return e.error_description
-    if (typeof e.msg === 'string') return e.msg
-    if (typeof e.code === 'string') {
-      const codes: Record<string, string> = {
-        user_already_exists: 'Пользователь с таким email уже зарегистрирован',
-        email_exists: 'Email уже зарегистрирован',
-        signup_disabled: 'Регистрация отключена в настройках Supabase',
-        weak_password: 'Слишком слабый пароль',
-        unexpected_failure: 'Ошибка сервера при регистрации. Проверьте триггер handle_new_user в Supabase'
-      }
-      return codes[e.code] ?? `Ошибка: ${e.code}`
-    }
+    return formatAuthError({
+      message: typeof e.message === 'string' ? e.message : undefined,
+      code: typeof e.code === 'string' ? e.code : undefined,
+      status: typeof e.status === 'number' ? e.status : undefined
+    })
   }
 
   return 'Неизвестная ошибка'
@@ -187,13 +216,14 @@ export const supabaseApi = {
         email,
         password,
         options: {
-          data: name ? { name } : undefined,
-          emailRedirectTo: `${window.location.origin}/login`
+          data: name ? { name } : {}
         }
       })
 
       if (error) {
-        throw new Error(error.message || error.code || 'Ошибка регистрации')
+        const err = new Error(formatAuthError(error)) as Error & { code?: string }
+        err.code = error.code
+        throw err
       }
 
       return data
@@ -201,7 +231,11 @@ export const supabaseApi = {
 
     signIn: async (email: string, password: string) => {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) throw new Error(error.message)
+      if (error) {
+        const err = new Error(formatAuthError(error)) as Error & { code?: string }
+        err.code = error.code
+        throw err
+      }
       return data
     },
 
@@ -222,7 +256,37 @@ export const supabaseApi = {
       email,
       name: metadata?.name as string | undefined,
       createdAt: new Date().toISOString()
-    })
+    }),
+
+    /** Создаёт профиль и категории, если триггер БД не сработал */
+    ensureProfile: async (): Promise<void> => {
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError) throw new Error(formatAuthError(userError))
+      if (!user) return
+
+      const { data: existing } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (!existing) {
+        const { error: insertError } = await supabase.from('users').insert({
+          id: user.id,
+          email: user.email ?? '',
+          name: (user.user_metadata?.name as string) || user.email?.split('@')[0] || 'User'
+        })
+
+        if (insertError && insertError.code !== '23505') {
+          throw new Error(insertError.message)
+        }
+      }
+
+      const { error: catError } = await supabase.rpc('init_system_categories')
+      if (catError) {
+        throw new Error(catError.message)
+      }
+    }
   },
 
   accounts: {
