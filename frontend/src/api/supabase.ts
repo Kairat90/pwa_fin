@@ -13,6 +13,7 @@ import {
 } from '../types'
 import { mapKeys, toSnakeCase } from '../utils/supabaseMappers'
 import { normalizeCategory } from '../utils/categoryTree'
+import { restoreBackupData, validateBackup } from '../utils/restoreBackup'
 
 const AUTH_CODE_MESSAGES: Record<string, string> = {
   signup_disabled: 'Регистрация отключена. Включите Email sign ups в Supabase → Authentication → Providers',
@@ -870,36 +871,8 @@ export const supabaseApi = {
     },
 
     restoreBackup: async (data: unknown): Promise<void> => {
-      if (!data || typeof data !== 'object') {
-        throw new Error('Неверный формат файла бэкапа')
-      }
-
-      const backup = data as Record<string, unknown>
-
-      if (!backup.version) {
-        throw new Error('Неверный формат бэкапа: отсутствует version')
-      }
-
-      const tableKeys = [
-        'accounts',
-        'categories',
-        'transactions',
-        'transfers',
-        'scheduled_transactions',
-        'contacts',
-        'debts',
-        'debt_payments'
-      ] as const
-
-      for (const key of tableKeys) {
-        if (backup[key] !== undefined && !Array.isArray(backup[key])) {
-          throw new Error(`Неверный формат бэкапа: ${key}`)
-        }
-      }
-
-      const { error } = await supabase.rpc('restore_user_backup', { p_backup: backup })
-
-      if (error) throw new Error(error.message)
+      validateBackup(data)
+      await restoreBackupData(data)
     }
   }
 }
