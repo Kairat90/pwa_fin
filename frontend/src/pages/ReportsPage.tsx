@@ -31,6 +31,7 @@ const ReportsPage: React.FC = () => {
   const [endDate, setEndDate] = useState(endOfMonth(new Date()))
   const [exporting, setExporting] = useState<'excel' | 'pdf' | null>(null)
   const [backupLoading, setBackupLoading] = useState(false)
+  const [restoreLoading, setRestoreLoading] = useState(false)
 
   const dateFrom = format(startDate, 'yyyy-MM-dd')
   const dateTo = format(endDate, 'yyyy-MM-dd')
@@ -119,21 +120,33 @@ const ReportsPage: React.FC = () => {
   }
 
   const handleRestore = () => {
+    if (
+      !window.confirm(
+        'Все текущие данные (счета, категории, транзакции, долги и т.д.) будут удалены и заменены содержимым бэкапа. Продолжить?'
+      )
+    ) {
+      return
+    }
+
     const input = document.createElement('input')
     input.type = 'file'
-    input.accept = '.json'
+    input.accept = '.json,application/json'
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0]
       if (!file) return
 
       try {
+        setRestoreLoading(true)
         const text = await file.text()
         const data = JSON.parse(text)
         await supabaseApi.reports.restoreBackup(data)
         toast.success('Бэкап восстановлен')
+        queryClient.invalidateQueries()
         window.location.reload()
-      } catch {
-        toast.error('Ошибка восстановления бэкапа')
+      } catch (error: unknown) {
+        toast.error(getErrorMessage(error) || 'Ошибка восстановления бэкапа')
+      } finally {
+        setRestoreLoading(false)
       }
     }
     input.click()
@@ -315,6 +328,7 @@ const ReportsPage: React.FC = () => {
         <Button
           variant="outline"
           onClick={handleRestore}
+          loading={restoreLoading}
           className="flex items-center gap-2"
         >
           <Upload className="w-4 h-4" />
