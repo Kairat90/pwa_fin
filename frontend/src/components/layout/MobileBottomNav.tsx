@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { Home, Receipt, Users, PieChart, Menu } from 'lucide-react'
 import { cn } from '../../utils/cn'
+import { ICON_16 } from '../../utils/iconSize'
 import { MobileMoreSheet } from './MobileMoreSheet'
 
 const mainLinks = [
@@ -33,7 +34,7 @@ export function MobileBottomNav() {
                 )
               }
             >
-              <Icon className="w-5 h-5" />
+              <Icon className={ICON_16} />
               <span>{label}</span>
             </NavLink>
           ))}
@@ -45,7 +46,7 @@ export function MobileBottomNav() {
               isMoreActive || showMore ? 'text-primary-600' : 'text-gray-400 hover:text-gray-600'
             )}
           >
-            <Menu className="w-5 h-5" />
+            <Menu className={ICON_16} />
             <span>Ещё</span>
           </button>
         </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { Plus, RefreshCw } from 'lucide-react'
@@ -16,7 +16,7 @@ interface CategoryColumnProps {
   accentClass: string
   trees: Category[]
   allCategories: Category[]
-  expandedIds: Set<string>
+  collapsedIds: Set<string>
   onToggleCollapse: (id: string) => void
   onEdit: (category: Category) => void
   onDelete: (id: string) => void
@@ -30,7 +30,7 @@ const CategoryColumn: React.FC<CategoryColumnProps> = ({
   accentClass,
   trees,
   allCategories,
-  expandedIds,
+  collapsedIds,
   onToggleCollapse,
   onEdit,
   onDelete,
@@ -55,7 +55,7 @@ const CategoryColumn: React.FC<CategoryColumnProps> = ({
         <CategoryTreeList
           nodes={trees}
           allCategories={allCategories}
-          expandedIds={expandedIds}
+          collapsedIds={collapsedIds}
           onToggleCollapse={onToggleCollapse}
           onEdit={onEdit}
           onDelete={onDelete}
@@ -72,7 +72,8 @@ const CategoryColumn: React.FC<CategoryColumnProps> = ({
 const CategoriesPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false)
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set())
+  const expandedByUserRef = useRef(new Set<string>())
   const queryClient = useQueryClient()
 
   const { data: categories, isLoading } = useQuery({
@@ -87,24 +88,56 @@ const CategoriesPage: React.FC = () => {
     return splitCategoryTreesByType(categories)
   }, [categories])
 
-  // Убрать id удалённых категорий из развёрнутых
-  useEffect(() => {
-    if (!categories?.length) return
-
-    const validIds = new Set(categories.map((c) => c.id))
-    setExpandedIds((prev) => {
-      const next = new Set([...prev].filter((id) => validIds.has(id)))
-      return next.size === prev.size ? prev : next
-    })
+  const parentIdsKey = useMemo(() => {
+    if (!categories?.length) return ''
+    return categories
+      .filter((c) => categories.some((ch) => ch.parentId === c.id))
+      .map((c) => c.id)
+      .sort()
+      .join(',')
   }, [categories])
 
+  // Родители свёрнуты по умолчанию; сохраняем ручное разворачивание
+  useLayoutEffect(() => {
+    if (!parentIdsKey) return
+
+    const parentIds = parentIdsKey.split(',').filter(Boolean)
+    const validIds = new Set(categories?.map((c) => c.id) ?? [])
+    expandedByUserRef.current = new Set(
+      [...expandedByUserRef.current].filter((id) => validIds.has(id))
+    )
+
+    setCollapsedIds((prev) => {
+      const next = new Set(prev)
+      let changed = false
+
+      for (const id of parentIds) {
+        if (!prev.has(id) && !expandedByUserRef.current.has(id)) {
+          next.add(id)
+          changed = true
+        }
+      }
+
+      for (const id of prev) {
+        if (!parentIds.includes(id)) {
+          next.delete(id)
+          changed = true
+        }
+      }
+
+      return changed ? next : prev
+    })
+  }, [parentIdsKey, categories])
+
   const toggleCollapse = (id: string) => {
-    setExpandedIds((prev) => {
+    setCollapsedIds((prev) => {
       const next = new Set(prev)
       if (next.has(id)) {
         next.delete(id)
+        expandedByUserRef.current.add(id)
       } else {
         next.add(id)
+        expandedByUserRef.current.delete(id)
       }
       return next
     })
@@ -208,7 +241,7 @@ const CategoriesPage: React.FC = () => {
             accentClass="border-green-400"
             trees={income}
             allCategories={categories ?? []}
-            expandedIds={expandedIds}
+            collapsedIds={collapsedIds}
             onToggleCollapse={toggleCollapse}
             onEdit={handleEdit}
             onDelete={deleteMutation.mutate}
@@ -221,7 +254,7 @@ const CategoriesPage: React.FC = () => {
             accentClass="border-red-400"
             trees={expense}
             allCategories={categories ?? []}
-            expandedIds={expandedIds}
+            collapsedIds={collapsedIds}
             onToggleCollapse={toggleCollapse}
             onEdit={handleEdit}
             onDelete={deleteMutation.mutate}

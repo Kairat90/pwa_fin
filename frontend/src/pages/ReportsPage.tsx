@@ -176,28 +176,28 @@ const ReportsPage: React.FC = () => {
           <ReportCard
             title="Доходы"
             value={summary.totalIncome}
-            icon={<TrendingUp className="w-5 h-5" />}
+            icon={<TrendingUp className="w-4 h-4" />}
             color="text-green-600"
             subtitle="KZT"
           />
           <ReportCard
             title="Расходы"
             value={summary.totalExpense}
-            icon={<TrendingDown className="w-5 h-5" />}
+            icon={<TrendingDown className="w-4 h-4" />}
             color="text-red-600"
             subtitle="KZT"
           />
           <ReportCard
             title="Чистый поток"
             value={summary.netFlow}
-            icon={<Wallet className="w-5 h-5" />}
+            icon={<Wallet className="w-4 h-4" />}
             color={summary.netFlow >= 0 ? 'text-blue-600' : 'text-red-600'}
             subtitle="KZT"
           />
           <ReportCard
             title="Норма сбережений"
             value={summary.savingsRate.toFixed(1)}
-            icon={<BarChart3 className="w-5 h-5" />}
+            icon={<BarChart3 className="w-4 h-4" />}
             color={summary.savingsRate > 0 ? 'text-green-600' : 'text-red-600'}
             subtitle="%"
           />

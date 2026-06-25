@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { cn } from '../../utils/cn'
+import { ICON_16 } from '../../utils/iconSize'
 
 export function Sidebar() {
   const { logout } = useAuth()
@@ -48,7 +49,7 @@ export function Sidebar() {
               )
             }
           >
-            <Icon className="w-5 h-5" />
+            <Icon className={ICON_16} />
             {label}
           </NavLink>
         ))}
@@ -59,7 +60,7 @@ export function Sidebar() {
           onClick={logout}
           className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-sm text-red-600 hover:bg-red-50 transition-colors"
         >
-          <LogOut className="w-5 h-5" />
+          <LogOut className={ICON_16} />
           Выйти
         </button>
       </div>

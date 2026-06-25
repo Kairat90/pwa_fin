@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react'
 import { X } from 'lucide-react'
 import { cn } from '../../utils/cn'
+import { ICON_16 } from '../../utils/iconSize'
 
 interface ModalProps {
   isOpen: boolean
@@ -55,7 +56,7 @@ export const Modal: React.FC<ModalProps> = ({
             onClick={onClose}
             className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className={ICON_16} />
           </button>
         </div>
         <div className="p-6 overflow-y-auto flex-1">

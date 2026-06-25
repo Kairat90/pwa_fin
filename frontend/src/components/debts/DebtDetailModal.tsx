@@ -5,6 +5,7 @@ import { X } from 'lucide-react'
 import { Debt } from '../../types'
 import { formatCurrency } from '../../utils/currency'
 import { cn } from '../../utils/cn'
+import { EMOJI_BOX_16, ICON_16 } from '../../utils/iconSize'
 
 interface DebtDetailModalProps {
   isOpen: boolean
@@ -34,7 +35,7 @@ export const DebtDetailModal: React.FC<DebtDetailModalProps> = ({
       >
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-xl">
+            <div className={cn(EMOJI_BOX_16, 'rounded-full bg-gray-100')}>
               {debt.type === 'iOwe' ? '💳' : '💰'}
             </div>
             <div>
@@ -49,7 +50,7 @@ export const DebtDetailModal: React.FC<DebtDetailModalProps> = ({
             onClick={onClose}
             className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className={ICON_16} />
           </button>
         </div>
 

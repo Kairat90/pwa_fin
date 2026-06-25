@@ -2,6 +2,7 @@ import React from 'react'
 import { Edit2, Trash2, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react'
 import { Category } from '../../types'
 import { cn } from '../../utils/cn'
+import { EMOJI_BOX_16, ICON_16 } from '../../utils/iconSize'
 
 interface CategoryCardProps {
   category: Category
@@ -35,29 +36,33 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
   const canEdit = !category.isSystem
 
   const handleCardClick = () => {
+    if (hasChildren) {
+      onToggleCollapse?.()
+      return
+    }
     if (canEdit) onEdit(category)
   }
 
   return (
     <div
       className={cn(
-        'bg-white rounded-lg border px-2.5 py-2 shadow-sm transition-shadow',
-        canEdit && 'cursor-pointer active:bg-gray-50 hover:shadow-md',
+        'bg-white rounded-lg border px-2 py-1.5 shadow-sm transition-shadow',
+        (canEdit || hasChildren) && 'cursor-pointer active:bg-gray-50 hover:shadow-md',
         depth > 0 && 'border-l-2 border-l-primary-200',
         category.isSystem && 'opacity-75 bg-gray-50'
       )}
       onClick={handleCardClick}
       onKeyDown={(e) => {
-        if (canEdit && (e.key === 'Enter' || e.key === ' ')) {
+        if ((canEdit || hasChildren) && (e.key === 'Enter' || e.key === ' ')) {
           e.preventDefault()
-          onEdit(category)
+          handleCardClick()
         }
       }}
-      role={canEdit ? 'button' : undefined}
-      tabIndex={canEdit ? 0 : undefined}
+      role={canEdit || hasChildren ? 'button' : undefined}
+      tabIndex={canEdit || hasChildren ? 0 : undefined}
     >
-      <div className="flex items-center justify-between gap-1.5">
-        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+      <div className="flex items-center justify-between gap-1">
+        <div className="flex items-center gap-1 min-w-0 flex-1">
           {hasChildren ? (
             <button
               type="button"
@@ -65,32 +70,26 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
                 e.stopPropagation()
                 onToggleCollapse?.()
               }}
-              className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded shrink-0"
+              className="p-0.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded shrink-0"
               title={isCollapsed ? 'Развернуть' : 'Свернуть'}
               aria-expanded={!isCollapsed}
             >
               <ChevronRight
-                className={cn(
-                  'w-3.5 h-3.5 transition-transform',
-                  !isCollapsed && 'rotate-90'
-                )}
+                className={cn(ICON_16, 'transition-transform', !isCollapsed && 'rotate-90')}
               />
             </button>
           ) : (
-            <span className="w-5 shrink-0" aria-hidden />
+            <span className="w-4 shrink-0" aria-hidden />
           )}
 
-          <div
-            className="w-6 h-6 rounded flex items-center justify-center text-xs shrink-0"
-            style={{ backgroundColor: category.color || '#E5E7EB' }}
-          >
+          <div className={EMOJI_BOX_16} style={{ backgroundColor: category.color || '#E5E7EB' }}>
             {category.icon || '📁'}
           </div>
 
           <div className="min-w-0">
             <h4 className="font-medium text-gray-900 truncate text-sm leading-tight">{category.name}</h4>
             {(category.isSystem || (hasChildren && isCollapsed)) && (
-              <p className="text-[10px] text-gray-400 leading-tight mt-0.5">
+              <p className="text-[10px] text-gray-400 leading-tight">
                 {category.isSystem && 'Системная'}
                 {category.isSystem && hasChildren && isCollapsed && ' · '}
                 {hasChildren && isCollapsed && `${childCount} подкат.`}
@@ -108,14 +107,14 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
               onMoveUp?.(category.id)
             }}
             className={cn(
-              'p-1 rounded transition-colors',
+              'p-0.5 rounded transition-colors',
               canMoveUp
                 ? 'text-gray-400 hover:text-primary-600 hover:bg-primary-50'
                 : 'text-gray-200 cursor-not-allowed'
             )}
             title="Выше"
           >
-            <ChevronUp className="w-3.5 h-3.5" />
+            <ChevronUp className={ICON_16} />
           </button>
           <button
             type="button"
@@ -125,14 +124,14 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
               onMoveDown?.(category.id)
             }}
             className={cn(
-              'p-1 rounded transition-colors',
+              'p-0.5 rounded transition-colors',
               canMoveDown
                 ? 'text-gray-400 hover:text-primary-600 hover:bg-primary-50'
                 : 'text-gray-200 cursor-not-allowed'
             )}
             title="Ниже"
           >
-            <ChevronDown className="w-3.5 h-3.5" />
+            <ChevronDown className={ICON_16} />
           </button>
 
           {canEdit && (
@@ -143,10 +142,10 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
                   e.stopPropagation()
                   onEdit(category)
                 }}
-                className="p-1 text-gray-400 hover:text-primary-600 rounded hover:bg-primary-50 transition-colors"
+                className="p-0.5 text-gray-400 hover:text-primary-600 rounded hover:bg-primary-50 transition-colors"
                 title="Редактировать"
               >
-                <Edit2 className="w-3.5 h-3.5" />
+                <Edit2 className={ICON_16} />
               </button>
               <button
                 type="button"
@@ -154,10 +153,10 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
                   e.stopPropagation()
                   onDelete(category.id)
                 }}
-                className="p-1 text-gray-400 hover:text-red-600 rounded hover:bg-red-50 transition-colors"
+                className="p-0.5 text-gray-400 hover:text-red-600 rounded hover:bg-red-50 transition-colors"
                 title="Удалить"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 className={ICON_16} />
               </button>
             </>
           )}

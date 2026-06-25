@@ -8,6 +8,7 @@ import {
   X
 } from 'lucide-react'
 import { cn } from '../../utils/cn'
+import { ICON_16 } from '../../utils/iconSize'
 
 interface MobileMoreSheetProps {
   isOpen: boolean
@@ -41,7 +42,7 @@ export function MobileMoreSheet({ isOpen, onClose }: MobileMoreSheetProps) {
             onClick={onClose}
             className="p-2 text-gray-400 hover:text-gray-600 rounded-lg"
           >
-            <X className="w-5 h-5" />
+            <X className={ICON_16} />
           </button>
         </div>
         <nav className="p-2 pb-4">
@@ -59,7 +60,7 @@ export function MobileMoreSheet({ isOpen, onClose }: MobileMoreSheetProps) {
                 )
               }
             >
-              <Icon className="w-5 h-5" />
+              <Icon className={ICON_16} />
               {label}
             </NavLink>
           ))}

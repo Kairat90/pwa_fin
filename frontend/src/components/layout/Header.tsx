@@ -1,5 +1,6 @@
 import { useAuth } from '../../context/AuthContext'
 import { LogOut, User } from 'lucide-react'
+import { ICON_16 } from '../../utils/iconSize'
 import { Button } from '../ui/Button'
 
 export function Header() {
@@ -15,11 +16,11 @@ export function Header() {
       </div>
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 text-sm text-gray-700">
-          <User size={18} />
+          <User className={ICON_16} />
           <span>{user?.name || user?.email}</span>
         </div>
         <Button variant="ghost" size="sm" onClick={logout}>
-          <LogOut size={18} />
+          <LogOut className={ICON_16} />
         </Button>
       </div>
     </header>

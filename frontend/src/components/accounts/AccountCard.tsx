@@ -2,7 +2,7 @@ import React from 'react'
 import { Edit2, Archive, RotateCcw } from 'lucide-react'
 import { Account } from '../../types'
 import { formatCurrency } from '../../utils/currency'
-import { cn } from '../../utils/cn'
+import { EMOJI_BOX_16, ICON_16 } from '../../utils/iconSize'
 
 interface AccountCardProps {
   account: Account
@@ -35,7 +35,7 @@ export const AccountCard: React.FC<AccountCardProps> = ({
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+            className={EMOJI_BOX_16}
             style={{ backgroundColor: account.color || '#4F46E5' }}
           >
             {account.icon || '💰'}
@@ -57,7 +57,7 @@ export const AccountCard: React.FC<AccountCardProps> = ({
                 className="p-1.5 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-primary-50 transition-colors"
                 title="Редактировать"
               >
-                <Edit2 className="w-4 h-4" />
+                <Edit2 className={ICON_16} />
               </button>
               <button
                 type="button"
@@ -65,7 +65,7 @@ export const AccountCard: React.FC<AccountCardProps> = ({
                 className="p-1.5 text-gray-400 hover:text-orange-600 rounded-lg hover:bg-orange-50 transition-colors"
                 title="Архивировать"
               >
-                <Archive className="w-4 h-4" />
+                <Archive className={ICON_16} />
               </button>
             </>
           )}
@@ -76,7 +76,7 @@ export const AccountCard: React.FC<AccountCardProps> = ({
               className="p-1.5 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50 transition-colors"
               title="Восстановить"
             >
-              <RotateCcw className="w-4 h-4" />
+              <RotateCcw className={ICON_16} />
             </button>
           )}
         </div>

@@ -42,11 +42,28 @@ export function getParentOptions(
     .sort(compareCategories)
 }
 
+/** Есть ли у категории прямые потомки в плоском списке */
+export function hasDirectChildren(categories: Category[], categoryId: string): boolean {
+  return categories.some((c) => c.parentId === categoryId)
+}
+
+/** Прямые потомки категории */
+export function getDirectChildren(categories: Category[], parentId: string): Category[] {
+  return categories.filter((c) => c.parentId === parentId).sort(compareCategories)
+}
+
+/** Нормализация parentId (на случай если пришёл только через join parent) */
+export function normalizeCategory(cat: Category): Category {
+  const parentId = cat.parentId ?? cat.parent?.id ?? null
+  return { ...cat, parentId }
+}
+
 /** Построение дерева из плоского списка */
 export function buildCategoryTree(categories: Category[]): Category[] {
+  const normalized = categories.map(normalizeCategory)
   const map = new Map<string, Category>()
 
-  categories.forEach((c) => map.set(c.id, { ...c, children: [] }))
+  normalized.forEach((c) => map.set(c.id, { ...c, children: [] }))
 
   const roots: Category[] = []
 

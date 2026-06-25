@@ -3,6 +3,7 @@ import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react'
 import { cn } from '../../utils/cn'
+import { ICON_16 } from '../../utils/iconSize'
 import { formatCurrency } from '../../utils/currency'
 import { Transaction } from '../../types'
 import { TopTransaction } from '../../api/supabase'
@@ -58,13 +59,13 @@ export const RecentTransactions: React.FC<RecentTransactionsProps> = ({
             >
               <div className="flex items-center gap-3">
                 <div className={cn(
-                  'w-10 h-10 rounded-full flex items-center justify-center',
+                  'w-6 h-6 rounded-full flex items-center justify-center',
                   isIncome ? 'bg-green-100' : 'bg-red-100'
                 )}>
                   {isIncome ? (
-                    <ArrowUpRight className="w-5 h-5 text-green-600" />
+                    <ArrowUpRight className={cn(ICON_16, 'text-green-600')} />
                   ) : (
-                    <ArrowDownRight className="w-5 h-5 text-red-600" />
+                    <ArrowDownRight className={cn(ICON_16, 'text-red-600')} />
                   )}
                 </div>
                 <div>

@@ -5,6 +5,7 @@ import { Edit2, Trash2, ArrowUpRight, ArrowDownRight } from 'lucide-react'
 import { Transaction } from '../../types'
 import { formatCurrency } from '../../utils/currency'
 import { cn } from '../../utils/cn'
+import { ICON_16 } from '../../utils/iconSize'
 
 interface TransactionListProps {
   transactions: Transaction[]
@@ -50,13 +51,13 @@ export const TransactionList: React.FC<TransactionListProps> = ({
           >
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <div className={cn(
-                'w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0',
+                'w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0',
                 amount > 0 ? 'bg-green-100' : 'bg-red-100'
               )}>
                 {amount > 0 ? (
-                  <ArrowUpRight className="w-5 h-5 text-green-600" />
+                  <ArrowUpRight className={cn(ICON_16, 'text-green-600')} />
                 ) : (
-                  <ArrowDownRight className="w-5 h-5 text-red-600" />
+                  <ArrowDownRight className={cn(ICON_16, 'text-red-600')} />
                 )}
               </div>
               <div className="min-w-0 flex-1">
@@ -122,14 +123,14 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                     onClick={() => onEdit(transaction)}
                     className="p-1.5 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-primary-50 transition-colors"
                   >
-                    <Edit2 className="w-4 h-4" />
+                    <Edit2 className={ICON_16} />
                   </button>
                   <button
                     type="button"
                     onClick={() => onDelete(transaction.id)}
                     className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className={ICON_16} />
                   </button>
                 </div>
               )}

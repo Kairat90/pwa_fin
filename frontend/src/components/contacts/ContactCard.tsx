@@ -3,6 +3,7 @@ import { Edit2, Trash2, Star, Phone, Mail, User } from 'lucide-react'
 import { Contact, Debt } from '../../types'
 import { formatCurrency } from '../../utils/currency'
 import { cn } from '../../utils/cn'
+import { EMOJI_BOX_16, ICON_16 } from '../../utils/iconSize'
 
 interface ContactCardProps {
   contact: Contact
@@ -32,18 +33,18 @@ export const ContactCard: React.FC<ContactCardProps> = ({
     <div className="bg-white rounded-xl border p-4 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center text-xl text-primary-600 flex-shrink-0">
+          <div className={cn(EMOJI_BOX_16, 'rounded-full bg-primary-100 text-primary-600 overflow-hidden')}>
             {contact.avatarData ? (
-              <img src={contact.avatarData} alt={contact.name} className="w-full h-full rounded-full object-cover" />
+              <img src={contact.avatarData} alt={contact.name} className="w-full h-full object-cover" />
             ) : (
-              <User className="w-6 h-6" />
+              <User className={ICON_16} />
             )}
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="font-semibold text-gray-900">{contact.name}</h3>
               {contact.isFavorite && (
-                <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                <Star className={cn(ICON_16, 'text-yellow-400 fill-yellow-400')} />
               )}
               {hasActiveDebts && (
                 <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
@@ -55,13 +56,13 @@ export const ContactCard: React.FC<ContactCardProps> = ({
               <div className="flex items-center gap-3 text-sm text-gray-500 mt-0.5 flex-wrap">
                 {contact.phone && (
                   <span className="flex items-center gap-1">
-                    <Phone className="w-3 h-3" />
+                    <Phone className={ICON_16} />
                     {contact.phone}
                   </span>
                 )}
                 {contact.email && (
                   <span className="flex items-center gap-1">
-                    <Mail className="w-3 h-3" />
+                    <Mail className={ICON_16} />
                     {contact.email}
                   </span>
                 )}
@@ -84,21 +85,21 @@ export const ContactCard: React.FC<ContactCardProps> = ({
             )}
             title="Избранное"
           >
-            <Star className="w-4 h-4" />
+            <Star className={ICON_16} />
           </button>
           <button
             type="button"
             onClick={() => onEdit(contact)}
             className="p-1.5 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-primary-50 transition-colors"
           >
-            <Edit2 className="w-4 h-4" />
+            <Edit2 className={ICON_16} />
           </button>
           <button
             type="button"
             onClick={() => onDelete(contact.id)}
             className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className={ICON_16} />
           </button>
         </div>
       </div>

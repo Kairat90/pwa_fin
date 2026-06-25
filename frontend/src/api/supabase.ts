@@ -12,6 +12,7 @@ import {
   User
 } from '../types'
 import { mapKeys, toSnakeCase } from '../utils/supabaseMappers'
+import { normalizeCategory } from '../utils/categoryTree'
 
 const AUTH_CODE_MESSAGES: Record<string, string> = {
   signup_disabled: 'Регистрация отключена. Включите Email sign ups в Supabase → Authentication → Providers',
@@ -368,7 +369,7 @@ export const supabaseApi = {
       if (type) query = query.eq('type', type)
       const { data, error } = await query
       if (error) throw new Error(error.message)
-      return mapKeys<Category[]>(data ?? [])
+      return (mapKeys<Category[]>(data ?? [])).map(normalizeCategory)
     },
 
     getOne: async (id: string): Promise<Category> => {

@@ -9,6 +9,8 @@ import { TransferForm } from '../components/transfers/TransferForm'
 import { Button } from '../components/ui/Button'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { formatCurrency } from '../utils/currency'
+import { cn } from '../utils/cn'
+import { ICON_16 } from '../utils/iconSize'
 
 const TransfersPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false)
@@ -70,7 +72,7 @@ const TransfersPage: React.FC = () => {
                     <span className="text-lg">{transfer.fromAccount?.icon || '🏦'}</span>
                     <span className="font-medium">{transfer.fromAccount?.name || 'Удален'}</span>
                   </div>
-                  <ArrowRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                  <ArrowRight className={cn(ICON_16, 'text-gray-400 flex-shrink-0')} />
                   <div className="flex items-center gap-2">
                     <span className="text-lg">{transfer.toAccount?.icon || '🏦'}</span>
                     <span className="font-medium">{transfer.toAccount?.name || 'Удален'}</span>

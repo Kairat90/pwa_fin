@@ -5,6 +5,7 @@ import { Edit2, Trash2, Plus, Calendar, AlertCircle, CheckCircle } from 'lucide-
 import { Debt } from '../../types'
 import { formatCurrency } from '../../utils/currency'
 import { cn } from '../../utils/cn'
+import { EMOJI_BOX_16, ICON_16 } from '../../utils/iconSize'
 
 interface DebtCardProps {
   debt: Debt
@@ -15,10 +16,10 @@ interface DebtCardProps {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  active: { label: 'Активен', color: 'bg-blue-100 text-blue-700', icon: <Calendar className="w-3 h-3" /> },
-  overdue: { label: 'Просрочен', color: 'bg-red-100 text-red-700', icon: <AlertCircle className="w-3 h-3" /> },
-  settled: { label: 'Погашен', color: 'bg-green-100 text-green-700', icon: <CheckCircle className="w-3 h-3" /> },
-  writtenOff: { label: 'Списан', color: 'bg-gray-100 text-gray-600', icon: <AlertCircle className="w-3 h-3" /> }
+  active: { label: 'Активен', color: 'bg-blue-100 text-blue-700', icon: <Calendar className={ICON_16} /> },
+  overdue: { label: 'Просрочен', color: 'bg-red-100 text-red-700', icon: <AlertCircle className={ICON_16} /> },
+  settled: { label: 'Погашен', color: 'bg-green-100 text-green-700', icon: <CheckCircle className={ICON_16} /> },
+  writtenOff: { label: 'Списан', color: 'bg-gray-100 text-gray-600', icon: <AlertCircle className={ICON_16} /> }
 }
 
 export const DebtCard: React.FC<DebtCardProps> = ({
@@ -48,7 +49,7 @@ export const DebtCard: React.FC<DebtCardProps> = ({
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-xl flex-shrink-0">
+            <div className={cn(EMOJI_BOX_16, 'rounded-full bg-gray-100')}>
               {debt.type === 'iOwe' ? '💳' : '💰'}
             </div>
             <div className="min-w-0">
@@ -106,7 +107,7 @@ export const DebtCard: React.FC<DebtCardProps> = ({
 
           {debt.dueDate && (
             <div className="mt-2 flex items-center gap-1 text-sm">
-              <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <Calendar className={cn(ICON_16, 'text-gray-400')} />
               <span className={cn(
                 isOverdue ? 'text-red-600 font-medium' : 'text-gray-500'
               )}>
@@ -125,7 +126,7 @@ export const DebtCard: React.FC<DebtCardProps> = ({
               className="p-1.5 text-green-600 hover:text-green-700 rounded-lg hover:bg-green-50 transition-colors"
               title="Добавить платеж"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className={ICON_16} />
             </button>
           )}
           <button
@@ -133,7 +134,7 @@ export const DebtCard: React.FC<DebtCardProps> = ({
             onClick={() => onEdit(debt)}
             className="p-1.5 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-primary-50 transition-colors"
           >
-            <Edit2 className="w-4 h-4" />
+            <Edit2 className={ICON_16} />
           </button>
           <button
             type="button"
@@ -141,7 +142,7 @@ export const DebtCard: React.FC<DebtCardProps> = ({
             className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
             title="Списать долг"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className={ICON_16} />
           </button>
         </div>
       </div>

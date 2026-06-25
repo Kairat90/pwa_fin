@@ -7,6 +7,7 @@ import { ScheduledTransaction } from '../../types'
 import { supabaseApi, getErrorMessage } from '../../api/supabase'
 import { formatCurrency } from '../../utils/currency'
 import { cn } from '../../utils/cn'
+import { EMOJI_BOX_16, ICON_16 } from '../../utils/iconSize'
 
 interface ScheduledCardProps {
   scheduled: ScheduledTransaction
@@ -79,7 +80,7 @@ export const ScheduledCard: React.FC<ScheduledCardProps> = ({
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <div className={cn(
-            'w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0',
+            EMOJI_BOX_16,
             scheduled.type === 'income' ? 'bg-green-100' : 'bg-red-100'
           )}>
             {scheduled.type === 'income' ? '💰' : '💸'}
@@ -119,7 +120,7 @@ export const ScheduledCard: React.FC<ScheduledCardProps> = ({
                 className="p-1.5 text-green-600 hover:text-green-700 rounded-lg hover:bg-green-50 transition-colors disabled:opacity-50"
                 title="Выполнить сейчас"
               >
-                <Play className="w-4 h-4" />
+                <Play className={ICON_16} />
               </button>
               <button
                 type="button"
@@ -128,7 +129,7 @@ export const ScheduledCard: React.FC<ScheduledCardProps> = ({
                 className="p-1.5 text-orange-600 hover:text-orange-700 rounded-lg hover:bg-orange-50 transition-colors disabled:opacity-50"
                 title="Пропустить"
               >
-                <SkipForward className="w-4 h-4" />
+                <SkipForward className={ICON_16} />
               </button>
             </>
           )}
@@ -138,7 +139,7 @@ export const ScheduledCard: React.FC<ScheduledCardProps> = ({
             className="p-1.5 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-primary-50 transition-colors"
             title="Редактировать"
           >
-            <Edit2 className="w-4 h-4" />
+            <Edit2 className={ICON_16} />
           </button>
           <button
             type="button"
@@ -146,7 +147,7 @@ export const ScheduledCard: React.FC<ScheduledCardProps> = ({
             className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
             title="Удалить"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className={ICON_16} />
           </button>
         </div>
       </div>
@@ -167,7 +168,7 @@ export const ScheduledCard: React.FC<ScheduledCardProps> = ({
             <div>
               <p className="text-sm text-gray-500">Следующее выполнение</p>
               <p className="font-medium text-gray-900 flex items-center gap-1 flex-wrap">
-                <Calendar className="w-4 h-4 text-gray-400" />
+                <Calendar className={cn(ICON_16, 'text-gray-400')} />
                 {format(new Date(scheduled.nextExecutionDate), 'dd MMM yyyy', { locale: ru })}
                 <span className={cn(
                   'text-xs',
