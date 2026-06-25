@@ -20,7 +20,7 @@ const DebtsPage: React.FC = () => {
   const [editingDebt, setEditingDebt] = useState<Debt | null>(null)
   const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null)
   const [filterType, setFilterType] = useState<'all' | 'iOwe' | 'owedToMe'>('all')
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'overdue' | 'settled' | 'writtenOff'>('all')
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'overdue' | 'settled' | 'writtenOff'>('active')
   const queryClient = useQueryClient()
 
   const { data: debts, isLoading, refetch } = useQuery({
