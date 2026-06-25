@@ -1,11 +1,11 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { Plus, RefreshCw } from 'lucide-react'
 import { supabaseApi, getErrorMessage } from '../api/supabase'
 import { Category } from '../types'
-import { getSiblingMoveFlags, splitCategoriesByType } from '../utils/categoryTree'
-import { CategoryCard } from '../components/categories/CategoryCard'
+import { splitCategoryTreesByType } from '../utils/categoryTree'
+import { CategoryTreeList } from '../components/categories/CategoryTreeList'
 import { CategoryForm } from '../components/categories/CategoryForm'
 import { Button } from '../components/ui/Button'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
@@ -14,8 +14,10 @@ interface CategoryColumnProps {
   title: string
   emoji: string
   accentClass: string
-  items: Array<Category & { depth: number }>
+  trees: Category[]
   allCategories: Category[]
+  expandedIds: Set<string>
+  onToggleCollapse: (id: string) => void
   onEdit: (category: Category) => void
   onDelete: (id: string) => void
   onMove: (id: string, direction: 'up' | 'down') => void
@@ -26,49 +28,51 @@ const CategoryColumn: React.FC<CategoryColumnProps> = ({
   title,
   emoji,
   accentClass,
-  items,
+  trees,
   allCategories,
+  expandedIds,
+  onToggleCollapse,
   onEdit,
   onDelete,
   onMove,
   isMoving
-}) => (
-  <section className="flex flex-col min-h-0">
-    <div className={`flex items-center gap-2 mb-3 pb-2 border-b-2 ${accentClass}`}>
-      <span className="text-xl">{emoji}</span>
-      <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-      <span className="text-sm text-gray-400 ml-auto">{items.length}</span>
-    </div>
+}) => {
+  const count = useMemo(() => {
+    const walk = (nodes: Category[]): number =>
+      nodes.reduce((sum, n) => sum + 1 + walk(n.children ?? []), 0)
+    return walk(trees)
+  }, [trees])
 
-    {items.length > 0 ? (
-      <div className="space-y-2">
-        {items.map((category) => {
-          const { canMoveUp, canMoveDown } = getSiblingMoveFlags(allCategories, category.id)
-
-          return (
-            <CategoryCard
-              key={category.id}
-              category={category}
-              depth={category.depth}
-              canMoveUp={canMoveUp && !isMoving}
-              canMoveDown={canMoveDown && !isMoving}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onMoveUp={(id) => onMove(id, 'up')}
-              onMoveDown={(id) => onMove(id, 'down')}
-            />
-          )
-        })}
+  return (
+    <section className="flex flex-col min-h-0">
+      <div className={`flex items-center gap-2 mb-3 pb-2 border-b-2 ${accentClass}`}>
+        <span className="text-base">{emoji}</span>
+        <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+        <span className="text-xs text-gray-400 ml-auto">{count}</span>
       </div>
-    ) : (
-      <p className="text-gray-400 text-sm py-8 text-center">Нет категорий</p>
-    )}
-  </section>
-)
+
+      {trees.length > 0 ? (
+        <CategoryTreeList
+          nodes={trees}
+          allCategories={allCategories}
+          expandedIds={expandedIds}
+          onToggleCollapse={onToggleCollapse}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onMove={onMove}
+          isMoving={isMoving}
+        />
+      ) : (
+        <p className="text-gray-400 text-sm py-8 text-center">Нет категорий</p>
+      )}
+    </section>
+  )
+}
 
 const CategoriesPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false)
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
   const queryClient = useQueryClient()
 
   const { data: categories, isLoading } = useQuery({
@@ -80,8 +84,31 @@ const CategoriesPage: React.FC = () => {
     if (!categories?.length) {
       return { income: [], expense: [] }
     }
-    return splitCategoriesByType(categories)
+    return splitCategoryTreesByType(categories)
   }, [categories])
+
+  // Убрать id удалённых категорий из развёрнутых
+  useEffect(() => {
+    if (!categories?.length) return
+
+    const validIds = new Set(categories.map((c) => c.id))
+    setExpandedIds((prev) => {
+      const next = new Set([...prev].filter((id) => validIds.has(id)))
+      return next.size === prev.size ? prev : next
+    })
+  }, [categories])
+
+  const toggleCollapse = (id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
 
   const initMutation = useMutation({
     mutationFn: () => supabaseApi.categories.init(),
@@ -151,7 +178,7 @@ const CategoriesPage: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Категории</h1>
           <p className="text-gray-500 text-sm">
-            {categories?.length || 0} категорий · доходы слева, расходы справа
+            {categories?.length || 0} категорий · нажмите ▶ чтобы развернуть группу
           </p>
         </div>
 
@@ -179,8 +206,10 @@ const CategoriesPage: React.FC = () => {
             title="Доходы"
             emoji="💰"
             accentClass="border-green-400"
-            items={income}
+            trees={income}
             allCategories={categories ?? []}
+            expandedIds={expandedIds}
+            onToggleCollapse={toggleCollapse}
             onEdit={handleEdit}
             onDelete={deleteMutation.mutate}
             onMove={handleMove}
@@ -190,8 +219,10 @@ const CategoriesPage: React.FC = () => {
             title="Расходы"
             emoji="💸"
             accentClass="border-red-400"
-            items={expense}
+            trees={expense}
             allCategories={categories ?? []}
+            expandedIds={expandedIds}
+            onToggleCollapse={toggleCollapse}
             onEdit={handleEdit}
             onDelete={deleteMutation.mutate}
             onMove={handleMove}

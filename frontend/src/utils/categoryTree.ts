@@ -92,27 +92,18 @@ export function flattenCategoryTree(
   return result
 }
 
-/** Разделить на доходы и расходы (системные — в конце колонки) */
-export function splitCategoriesByType(categories: Category[]): {
-  income: Array<Category & { depth: number }>
-  expense: Array<Category & { depth: number }>
+/** Разделить на доходы и расходы — деревья (системные в конце) */
+export function splitCategoryTreesByType(categories: Category[]): {
+  income: Category[]
+  expense: Category[]
 } {
   const userCats = categories.filter((c) => !c.isSystem)
   const systemCats = categories.filter((c) => c.isSystem)
 
-  const incomeUser = flattenCategoryTree(
-    buildCategoryTree(userCats.filter((c) => c.type === 'income'))
-  )
-  const expenseUser = flattenCategoryTree(
-    buildCategoryTree(userCats.filter((c) => c.type === 'expense'))
-  )
-
-  const incomeSystem = flattenCategoryTree(
-    buildCategoryTree(systemCats.filter((c) => c.type === 'income'))
-  )
-  const expenseSystem = flattenCategoryTree(
-    buildCategoryTree(systemCats.filter((c) => c.type === 'expense'))
-  )
+  const incomeUser = buildCategoryTree(userCats.filter((c) => c.type === 'income'))
+  const expenseUser = buildCategoryTree(userCats.filter((c) => c.type === 'expense'))
+  const incomeSystem = buildCategoryTree(systemCats.filter((c) => c.type === 'income'))
+  const expenseSystem = buildCategoryTree(systemCats.filter((c) => c.type === 'expense'))
 
   return {
     income: [...incomeUser, ...incomeSystem],
@@ -120,20 +111,32 @@ export function splitCategoriesByType(categories: Category[]): {
   }
 }
 
-/** Можно ли переместить категорию вверх/вниз среди соседей */
+/** @deprecated Используйте splitCategoryTreesByType */
+export function splitCategoriesByType(categories: Category[]): {
+  income: Array<Category & { depth: number }>
+  expense: Array<Category & { depth: number }>
+} {
+  const trees = splitCategoryTreesByType(categories)
+
+  return {
+    income: flattenCategoryTree(trees.income),
+    expense: flattenCategoryTree(trees.expense)
+  }
+}
+
+/** Можно ли переместить категорию вверх/вниз среди соседей (включая подкатегории и системные) */
 export function getSiblingMoveFlags(
   categories: Category[],
   categoryId: string
 ): { canMoveUp: boolean; canMoveDown: boolean } {
   const current = categories.find((c) => c.id === categoryId)
-  if (!current || current.isSystem) {
+  if (!current) {
     return { canMoveUp: false, canMoveDown: false }
   }
 
   const siblings = categories
     .filter(
       (c) =>
-        !c.isSystem &&
         c.type === current.type &&
         (c.parentId ?? null) === (current.parentId ?? null)
     )
