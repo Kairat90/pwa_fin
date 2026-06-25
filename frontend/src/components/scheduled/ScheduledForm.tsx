@@ -7,6 +7,7 @@ import { format } from 'date-fns'
 import { ScheduledTransaction, Account, Category } from '../../types'
 import { supabaseApi, getErrorMessage, ScheduledCreateData } from '../../api/supabase'
 import { cn } from '../../utils/cn'
+import { buildCategoryTree, flattenCategoryTree, formatCategoryOptionLabel } from '../../utils/categoryTree'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Modal } from '../ui/Modal'
@@ -171,6 +172,8 @@ export const ScheduledForm: React.FC<ScheduledFormProps> = ({
     }
   }
 
+  const categoryOptions = flattenCategoryTree(buildCategoryTree(categories))
+
   return (
     <Modal
       isOpen={isOpen}
@@ -247,9 +250,9 @@ export const ScheduledForm: React.FC<ScheduledFormProps> = ({
                 {...register('categoryId')}
               >
                 <option value="">Без категории</option>
-                {categories.map((category) => (
+                {categoryOptions.map((category) => (
                   <option key={category.id} value={category.id}>
-                    {category.icon} {category.name}
+                    {formatCategoryOptionLabel(category, category.depth)}
                   </option>
                 ))}
               </select>

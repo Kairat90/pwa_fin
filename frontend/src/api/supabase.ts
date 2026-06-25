@@ -360,7 +360,10 @@ export const supabaseApi = {
 
   categories: {
     getAll: async (type?: 'income' | 'expense'): Promise<Category[]> => {
-      let query = supabase.from('categories').select('*').order('name', { ascending: true })
+      let query = supabase
+        .from('categories')
+        .select('*, parent:parent_id(id, name, icon, color)')
+        .order('name', { ascending: true })
       if (type) query = query.eq('type', type)
       const { data, error } = await query
       if (error) throw new Error(error.message)

@@ -38,12 +38,12 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
       onClick={onClose}
     >
       <div
         className={cn(
-          'bg-white rounded-2xl shadow-2xl w-full mx-4 max-h-[90vh] flex flex-col',
+          'bg-white rounded-2xl shadow-2xl w-full max-h-[90vh] flex flex-col',
           sizes[size]
         )}
         onClick={(e) => e.stopPropagation()}

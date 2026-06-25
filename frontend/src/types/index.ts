@@ -25,7 +25,7 @@ export interface Category {
   icon?: string
   color?: string
   type: 'income' | 'expense'
-  parentId?: string
+  parentId?: string | null
   parent?: Category
   isSystem?: boolean
   children?: Category[]

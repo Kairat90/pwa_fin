@@ -5,6 +5,7 @@ import { z } from 'zod'
 import toast from 'react-hot-toast'
 import { Category } from '../../types'
 import { supabaseApi, getErrorMessage } from '../../api/supabase'
+import { formatCategoryOptionLabel, getCategoryDepth, getParentOptions } from '../../utils/categoryTree'
 import { cn } from '../../utils/cn'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
@@ -13,6 +14,7 @@ import { Modal } from '../ui/Modal'
 const categorySchema = z.object({
   name: z.string().min(1, 'Название обязательно'),
   type: z.enum(['income', 'expense']),
+  parentId: z.string().optional(),
   icon: z.string().optional(),
   color: z.string().optional()
 })
@@ -39,6 +41,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
   category
 }) => {
   const [loading, setLoading] = useState(false)
+  const [allCategories, setAllCategories] = useState<Category[]>([])
   const [selectedColor, setSelectedColor] = useState(category?.color || '#6B7280')
 
   const {
@@ -52,42 +55,51 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
     resolver: zodResolver(categorySchema),
     defaultValues: {
       type: 'expense',
+      parentId: '',
       icon: '📁',
       color: '#6B7280'
     }
   })
 
   useEffect(() => {
-    if (isOpen) {
-      if (category) {
-        reset({
-          name: category.name,
-          type: category.type,
-          icon: category.icon || '📁',
-          color: category.color || '#6B7280'
-        })
-        setSelectedColor(category.color || '#6B7280')
-      } else {
-        reset({
-          name: '',
-          type: 'expense',
-          icon: '📁',
-          color: '#6B7280'
-        })
-        setSelectedColor('#6B7280')
-      }
+    if (!isOpen) return
+
+    supabaseApi.categories.getAll().then(setAllCategories).catch(() => setAllCategories([]))
+
+    if (category) {
+      reset({
+        name: category.name,
+        type: category.type,
+        parentId: category.parentId || '',
+        icon: category.icon || '📁',
+        color: category.color || '#6B7280'
+      })
+      setSelectedColor(category.color || '#6B7280')
+    } else {
+      reset({
+        name: '',
+        type: 'expense',
+        parentId: '',
+        icon: '📁',
+        color: '#6B7280'
+      })
+      setSelectedColor('#6B7280')
     }
   }, [isOpen, category, reset])
 
   const selectedIcon = watch('icon') || '📁'
   const selectedType = watch('type')
+  const parentOptions = getParentOptions(allCategories, selectedType, category?.id)
 
   const onSubmit = async (data: CategoryFormData) => {
     try {
       setLoading(true)
       const payload = {
-        ...data,
-        color: selectedColor
+        name: data.name,
+        type: data.type,
+        icon: data.icon,
+        color: selectedColor,
+        parentId: data.parentId || null
       }
 
       if (category) {
@@ -121,7 +133,10 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={() => setValue('type', 'expense')}
+              onClick={() => {
+                setValue('type', 'expense')
+                setValue('parentId', '')
+              }}
               className={cn(
                 'p-3 rounded-lg border-2 transition-colors text-center',
                 selectedType === 'expense'
@@ -133,7 +148,10 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => setValue('type', 'income')}
+              onClick={() => {
+                setValue('type', 'income')
+                setValue('parentId', '')
+              }}
               className={cn(
                 'p-3 rounded-lg border-2 transition-colors text-center',
                 selectedType === 'income'
@@ -147,8 +165,26 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
         </div>
 
         <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Родительская категория</label>
+          <select
+            className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            {...register('parentId')}
+          >
+            <option value="">Без группы (верхний уровень)</option>
+            {parentOptions.map((parent) => (
+              <option key={parent.id} value={parent.id}>
+                {formatCategoryOptionLabel(parent, getCategoryDepth(allCategories, parent.id))}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-gray-500">
+            Выберите группу, чтобы объединить категории (например: «Дом» → «Коммунальные»)
+          </p>
+        </div>
+
+        <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Иконка</label>
-          <div className="grid grid-cols-8 gap-2">
+          <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
             {ICONS.map((icon) => (
               <button
                 key={icon}
@@ -180,7 +216,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
                 type="button"
                 onClick={() => setSelectedColor(color)}
                 className={cn(
-                  'w-8 h-8 rounded-full transition-all',
+                  'w-9 h-9 sm:w-8 sm:h-8 rounded-full transition-all',
                   selectedColor === color
                     ? 'ring-2 ring-primary-500 ring-offset-2'
                     : 'hover:scale-110'
