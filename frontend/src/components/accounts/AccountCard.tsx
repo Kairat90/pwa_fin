@@ -2,6 +2,7 @@ import React from 'react'
 import { Edit2, Archive, RotateCcw } from 'lucide-react'
 import { Account } from '../../types'
 import { formatCurrency } from '../../utils/currency'
+import { cn } from '../../utils/cn'
 import { EMOJI_BOX_16, ICON_16 } from '../../utils/iconSize'
 
 interface AccountCardProps {
