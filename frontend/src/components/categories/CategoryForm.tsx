@@ -5,7 +5,7 @@ import { z } from 'zod'
 import toast from 'react-hot-toast'
 import { Category } from '../../types'
 import { supabaseApi, getErrorMessage } from '../../api/supabase'
-import { formatCategoryOptionLabel, getCategoryDepth, getParentOptions } from '../../utils/categoryTree'
+import { formatCategoryOptionLabel, getCategoryDepth, getNextSortOrder, getParentOptions } from '../../utils/categoryTree'
 import { cn } from '../../utils/cn'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
@@ -26,6 +26,7 @@ interface CategoryFormProps {
   onClose: () => void
   onSuccess: () => void
   category?: Category
+  allCategories?: Category[]
 }
 
 const ICONS = [
@@ -38,10 +39,11 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
   isOpen,
   onClose,
   onSuccess,
-  category
+  category,
+  allCategories: allCategoriesProp
 }) => {
   const [loading, setLoading] = useState(false)
-  const [allCategories, setAllCategories] = useState<Category[]>([])
+  const [allCategories, setAllCategories] = useState<Category[]>(allCategoriesProp ?? [])
   const [selectedColor, setSelectedColor] = useState(category?.color || '#6B7280')
 
   const {
@@ -64,7 +66,11 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
   useEffect(() => {
     if (!isOpen) return
 
-    supabaseApi.categories.getAll().then(setAllCategories).catch(() => setAllCategories([]))
+    if (allCategoriesProp?.length) {
+      setAllCategories(allCategoriesProp)
+    } else {
+      supabaseApi.categories.getAll().then(setAllCategories).catch(() => setAllCategories([]))
+    }
 
     if (category) {
       reset({
@@ -85,7 +91,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
       })
       setSelectedColor('#6B7280')
     }
-  }, [isOpen, category, reset])
+  }, [isOpen, category, reset, allCategoriesProp])
 
   const selectedIcon = watch('icon') || '📁'
   const selectedType = watch('type')
@@ -106,7 +112,12 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
         await supabaseApi.categories.update(category.id, payload)
         toast.success('Категория обновлена')
       } else {
-        await supabaseApi.categories.create(payload)
+        const sortOrder = getNextSortOrder(
+          allCategories,
+          data.type,
+          data.parentId || null
+        )
+        await supabaseApi.categories.create({ ...payload, sortOrder })
         toast.success('Категория создана')
       }
       onSuccess()

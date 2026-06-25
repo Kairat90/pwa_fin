@@ -363,6 +363,7 @@ export const supabaseApi = {
       let query = supabase
         .from('categories')
         .select('*, parent:parent_id(id, name, icon, color)')
+        .order('sort_order', { ascending: true })
         .order('name', { ascending: true })
       if (type) query = query.eq('type', type)
       const { data, error } = await query
@@ -404,6 +405,14 @@ export const supabaseApi = {
 
     init: async (): Promise<void> => {
       const { error } = await supabase.rpc('init_system_categories')
+      if (error) throw new Error(error.message)
+    },
+
+    reorder: async (id: string, direction: 'up' | 'down'): Promise<void> => {
+      const { error } = await supabase.rpc('reorder_category', {
+        p_category_id: id,
+        p_direction: direction
+      })
       if (error) throw new Error(error.message)
     }
   },

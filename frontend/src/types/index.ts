@@ -28,6 +28,7 @@ export interface Category {
   parentId?: string | null
   parent?: Category
   isSystem?: boolean
+  sortOrder?: number
   children?: Category[]
 }
 
