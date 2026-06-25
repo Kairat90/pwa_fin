@@ -43,9 +43,15 @@ const Register: React.FC = () => {
   const onSubmit = async (data: RegisterFormData) => {
     try {
       setLoading(true)
-      await registerUser(data.email, data.password, data.name || undefined)
-      toast.success('Аккаунт создан!')
-      navigate('/dashboard')
+      const { needsEmailConfirmation } = await registerUser(data.email, data.password, data.name || undefined)
+
+      if (needsEmailConfirmation) {
+        toast.success('Письмо отправлено! Подтвердите email и войдите.')
+        navigate('/login')
+      } else {
+        toast.success('Аккаунт создан!')
+        navigate('/dashboard')
+      }
     } catch (error: unknown) {
       toast.error(getErrorMessage(error) || 'Ошибка регистрации')
     } finally {

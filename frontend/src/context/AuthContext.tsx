@@ -6,7 +6,7 @@ interface AuthContextType {
   user: User | null
   loading: boolean
   login: (email: string, password: string) => Promise<void>
-  register: (email: string, password: string, name?: string) => Promise<void>
+  register: (email: string, password: string, name?: string) => Promise<{ needsEmailConfirmation: boolean }>
   logout: () => void
   isAuthenticated: boolean
 }
@@ -56,9 +56,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   const register = async (email: string, password: string, name?: string) => {
-    const { user: authUser } = await supabaseApi.auth.signUp(email, password, name)
-    if (!authUser) throw new Error('Ошибка регистрации')
-    setUser(supabaseApi.auth.mapUser(authUser.id, email, { name, ...authUser.user_metadata }))
+    const { user: authUser, session } = await supabaseApi.auth.signUp(email, password, name)
+
+    if (!authUser) {
+      throw new Error('Не удалось создать аккаунт')
+    }
+
+    // Supabase возвращает пустые identities, если email уже занят (защита от перебора)
+    if (authUser.identities?.length === 0) {
+      throw new Error('Пользователь с таким email уже зарегистрирован')
+    }
+
+    // Подтверждение email включено — сессии нет, это не ошибка
+    if (!session) {
+      return { needsEmailConfirmation: true }
+    }
+
+    setUser(supabaseApi.auth.mapUser(authUser.id, authUser.email ?? email, { name, ...authUser.user_metadata }))
+    return { needsEmailConfirmation: false }
   }
 
   const logout = () => {

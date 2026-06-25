@@ -15,10 +15,29 @@ import { mapKeys, toSnakeCase } from '../utils/supabaseMappers'
 
 /** Сообщение об ошибке для toast */
 export function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message
-  if (error && typeof error === 'object' && 'message' in error) {
-    return String((error as { message: string }).message)
+  if (error instanceof Error) {
+    const msg = error.message?.trim()
+    if (msg && msg !== '{}' && msg !== '[object Object]') return msg
+    return error.name || 'Неизвестная ошибка'
   }
+
+  if (error && typeof error === 'object') {
+    const e = error as Record<string, unknown>
+    if (typeof e.message === 'string' && e.message.trim()) return e.message
+    if (typeof e.error_description === 'string') return e.error_description
+    if (typeof e.msg === 'string') return e.msg
+    if (typeof e.code === 'string') {
+      const codes: Record<string, string> = {
+        user_already_exists: 'Пользователь с таким email уже зарегистрирован',
+        email_exists: 'Email уже зарегистрирован',
+        signup_disabled: 'Регистрация отключена в настройках Supabase',
+        weak_password: 'Слишком слабый пароль',
+        unexpected_failure: 'Ошибка сервера при регистрации. Проверьте триггер handle_new_user в Supabase'
+      }
+      return codes[e.code] ?? `Ошибка: ${e.code}`
+    }
+  }
+
   return 'Неизвестная ошибка'
 }
 
@@ -167,9 +186,16 @@ export const supabaseApi = {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { name } }
+        options: {
+          data: name ? { name } : undefined,
+          emailRedirectTo: `${window.location.origin}/login`
+        }
       })
-      if (error) throw new Error(error.message)
+
+      if (error) {
+        throw new Error(error.message || error.code || 'Ошибка регистрации')
+      }
+
       return data
     },
 
