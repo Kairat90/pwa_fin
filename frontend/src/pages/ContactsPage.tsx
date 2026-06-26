@@ -1,26 +1,28 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { Plus, Search, Star } from 'lucide-react'
+import { Plus, Star } from 'lucide-react'
 import { supabaseApi, getErrorMessage } from '../api/supabase'
 import { Contact } from '../types'
 import { ContactCard } from '../components/contacts/ContactCard'
 import { ContactForm } from '../components/contacts/ContactForm'
 import { Button } from '../components/ui/Button'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
+import { SearchField } from '../components/common/SearchField'
 import { cn } from '../utils/cn'
 
 const ContactsPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false)
   const [editingContact, setEditingContact] = useState<Contact | null>(null)
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const [appliedSearch, setAppliedSearch] = useState('')
   const [showFavorites, setShowFavorites] = useState(false)
   const queryClient = useQueryClient()
 
   const { data: contacts, isLoading } = useQuery({
-    queryKey: ['contacts', searchQuery, showFavorites],
+    queryKey: ['contacts', appliedSearch, showFavorites],
     queryFn: () => supabaseApi.contacts.getAll({
-      search: searchQuery || undefined,
+      search: appliedSearch || undefined,
       isFavorite: showFavorites || undefined
     })
   })
@@ -87,16 +89,12 @@ const ContactsPage: React.FC = () => {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Поиск по имени, телефону, email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
-        </div>
+        <SearchField
+          value={searchInput}
+          onChange={setSearchInput}
+          onSearch={() => setAppliedSearch(searchInput.trim())}
+          placeholder="Поиск по имени, телефону, email..."
+        />
         <button
           type="button"
           onClick={() => setShowFavorites(!showFavorites)}
@@ -133,7 +131,7 @@ const ContactsPage: React.FC = () => {
         <div className="text-center py-12">
           <p className="text-gray-400 text-lg">Нет контактов</p>
           <p className="text-gray-400 text-sm mt-1">
-            {searchQuery ? 'Попробуйте изменить поиск' : 'Создайте первый контакт'}
+            {appliedSearch ? 'Попробуйте изменить поиск' : 'Создайте первый контакт'}
           </p>
         </div>
       )}

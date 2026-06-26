@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
-import { Search, Filter, X } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import { Filter, X } from 'lucide-react'
 import { Account, Category } from '../../types'
 import { Button } from '../ui/Button'
+import { SearchField } from '../common/SearchField'
 
 export interface TransactionFilterValues {
   search?: string
@@ -37,16 +38,38 @@ export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
     endDate: initialFilters?.endDate || ''
   })
 
+  useEffect(() => {
+    setFilters({
+      search: initialFilters?.search || '',
+      accountId: initialFilters?.accountId || '',
+      categoryId: initialFilters?.categoryId || '',
+      type: initialFilters?.type || '',
+      startDate: initialFilters?.startDate || '',
+      endDate: initialFilters?.endDate || ''
+    })
+  }, [
+    initialFilters?.search,
+    initialFilters?.accountId,
+    initialFilters?.categoryId,
+    initialFilters?.type,
+    initialFilters?.startDate,
+    initialFilters?.endDate
+  ])
+
   const handleChange = (key: string, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }))
   }
 
-  const handleSubmit = () => {
+  const applyFilters = () => {
     const activeFilters: TransactionFilterValues = {}
     Object.entries(filters).forEach(([key, value]) => {
       if (value) activeFilters[key as keyof TransactionFilterValues] = value
     })
     onFilter(activeFilters)
+  }
+
+  const handleSubmit = () => {
+    applyFilters()
     setIsOpen(false)
   }
 
@@ -68,17 +91,12 @@ export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Поиск по описанию или тегам..."
-            value={filters.search}
-            onChange={(e) => handleChange('search', e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-            className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
-        </div>
+        <SearchField
+          value={filters.search}
+          onChange={(value) => handleChange('search', value)}
+          onSearch={applyFilters}
+          placeholder="Поиск по описанию или тегам..."
+        />
         <Button
           variant={hasActiveFilters ? 'primary' : 'outline'}
           onClick={() => setIsOpen(!isOpen)}

@@ -533,6 +533,32 @@ export const supabaseApi = {
 
       const page = filters?.page ?? 1
       const limit = filters?.limit ?? 50
+
+      // Поиск по примечанию и тегам — фильтрация на клиенте (теги — массив, ilike в PostgREST неудобен)
+      if (filters?.search?.trim()) {
+        const term = filters.search.trim().toLowerCase()
+        const { data, error } = await query.limit(2000)
+
+        if (error) throw new Error(error.message)
+
+        const matched = mapKeys<Transaction[]>(data ?? []).filter(
+          (t) =>
+            (t.note?.toLowerCase().includes(term) ?? false) ||
+            t.tags.some((tag) => tag.toLowerCase().includes(term))
+        )
+
+        const total = matched.length
+        const from = (page - 1) * limit
+
+        return {
+          data: matched.slice(from, from + limit),
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit) || 1
+        }
+      }
+
       const from = (page - 1) * limit
       const to = from + limit - 1
 

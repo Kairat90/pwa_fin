@@ -85,10 +85,16 @@ const TransactionsPage: React.FC = () => {
   }
 
   const handleFilter = (newFilters: TransactionFilterValues) => {
-    const params: Record<string, string> = {}
-    Object.entries(newFilters).forEach(([key, value]) => {
-      if (value) params[key] = value
-    })
+    const params: Record<string, string> = {
+      startDate: newFilters.startDate || format(startOfMonth(new Date()), 'yyyy-MM-dd'),
+      endDate: newFilters.endDate || format(endOfMonth(new Date()), 'yyyy-MM-dd')
+    }
+
+    if (newFilters.accountId) params.accountId = newFilters.accountId
+    if (newFilters.categoryId) params.categoryId = newFilters.categoryId
+    if (newFilters.type) params.type = newFilters.type
+    if (newFilters.search) params.search = newFilters.search
+
     setSearchParams(params)
   }
 
