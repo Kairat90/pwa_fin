@@ -25,6 +25,8 @@ import { Card } from '../components/ui/Card'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { cn } from '../utils/cn'
 import { MAX_BACKUP_FILE_BYTES } from '../utils/restoreBackup'
+import { createAndExportBackup } from '../utils/backupExport'
+import { formatLastBackupLabel } from '../utils/backupSchedule'
 
 const ReportsPage: React.FC = () => {
   const queryClient = useQueryClient()
@@ -102,19 +104,18 @@ const ReportsPage: React.FC = () => {
   const handleBackup = async () => {
     try {
       setBackupLoading(true)
-      const json = await supabaseApi.reports.createBackup()
-      const url = window.URL.createObjectURL(
-        new Blob([json], { type: 'application/json' })
+      const method = await createAndExportBackup()
+      toast.success(
+        method === 'share'
+          ? 'Бэкап готов — выберите приложение для сохранения'
+          : 'Бэкап сохранён в файл'
       )
-      const link = document.createElement('a')
-      link.href = url
-      link.setAttribute('download', `backup-${format(new Date(), 'yyyy-MM-dd')}.json`)
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      toast.success('Бэкап создан')
-    } catch {
-      toast.error('Ошибка создания бэкапа')
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        return
+      }
+
+      toast.error(getErrorMessage(error) || 'Ошибка создания бэкапа')
     } finally {
       setBackupLoading(false)
     }
@@ -341,6 +342,9 @@ const ReportsPage: React.FC = () => {
           Восстановить
         </Button>
       </div>
+      <p className="text-xs text-gray-500 text-center">
+        Последний бэкап: {formatLastBackupLabel()}
+      </p>
     </div>
   )
 }

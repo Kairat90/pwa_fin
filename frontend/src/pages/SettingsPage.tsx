@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
-import { User, Lock, Trash2, AlertTriangle, Moon } from 'lucide-react'
+import { User, Lock, Trash2, AlertTriangle, Moon, Save } from 'lucide-react'
 import { supabaseApi, getErrorMessage } from '../api/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
@@ -16,6 +16,14 @@ import { Input } from '../components/ui/Input'
 import { Card } from '../components/ui/Card'
 import { Modal } from '../components/ui/Modal'
 import { ICON_16 } from '../utils/iconSize'
+import {
+  getBackupSettings,
+  saveBackupSettings,
+  formatLastBackupLabel,
+  BACKUP_INTERVAL_DAYS,
+  type BackupScheduleSettings
+} from '../utils/backupSchedule'
+import { createAndExportBackup } from '../utils/backupExport'
 
 const profileSchema = z.object({
   name: z.string().min(1, 'Введите имя').max(100, 'Слишком длинное имя'),
@@ -42,6 +50,9 @@ const SettingsPage: React.FC = () => {
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState('')
+  const [backupSettings, setBackupSettings] = useState<BackupScheduleSettings>(() => getBackupSettings())
+  const [backupLoading, setBackupLoading] = useState(false)
+  const [lastBackupLabel, setLastBackupLabel] = useState(formatLastBackupLabel())
 
   const profileForm = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -82,6 +93,34 @@ const SettingsPage: React.FC = () => {
       toast.error(getErrorMessage(error) || 'Ошибка смены пароля')
     } finally {
       setPasswordLoading(false)
+    }
+  }
+
+  const updateBackupSettings = (patch: Partial<BackupScheduleSettings>) => {
+    const next = { ...backupSettings, ...patch }
+    setBackupSettings(next)
+    saveBackupSettings(next)
+    toast.success('Настройки бэкапа сохранены')
+  }
+
+  const onCreateBackupNow = async () => {
+    try {
+      setBackupLoading(true)
+      const method = await createAndExportBackup()
+      setLastBackupLabel(formatLastBackupLabel())
+      toast.success(
+        method === 'share'
+          ? 'Бэкап готов — выберите приложение для сохранения'
+          : 'Бэкап сохранён в файл'
+      )
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        return
+      }
+
+      toast.error(getErrorMessage(error) || 'Ошибка создания бэкапа')
+    } finally {
+      setBackupLoading(false)
     }
   }
 
@@ -197,6 +236,53 @@ const SettingsPage: React.FC = () => {
           />
           <Button type="submit" variant="secondary" loading={passwordLoading}>Изменить пароль</Button>
         </form>
+      </Card>
+
+      <Card>
+        <div className="flex items-center gap-2 mb-4">
+          <Save className={ICON_16} />
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Автобэкап</h2>
+        </div>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          Последний бэкап: {lastBackupLabel}. Рекомендуется сохранять копию раз в {BACKUP_INTERVAL_DAYS} дней.
+        </p>
+        <div className="space-y-4">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-1 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+              checked={backupSettings.reminderEnabled}
+              onChange={(e) => updateBackupSettings({ reminderEnabled: e.target.checked })}
+            />
+            <span>
+              <span className="font-medium text-gray-900 dark:text-gray-100 block">
+                Еженедельное напоминание
+              </span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                Баннер «Сделайте бэкап», если прошло {BACKUP_INTERVAL_DAYS} дней
+              </span>
+            </span>
+          </label>
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-1 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+              checked={backupSettings.autoExport}
+              onChange={(e) => updateBackupSettings({ autoExport: e.target.checked })}
+            />
+            <span>
+              <span className="font-medium text-gray-900 dark:text-gray-100 block">
+                Автосохранение при напоминании
+              </span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                При входе в приложение создаётся файл бэкапа. На телефоне — через «Поделиться» (Share API).
+              </span>
+            </span>
+          </label>
+          <Button type="button" variant="outline" loading={backupLoading} onClick={() => void onCreateBackupNow()}>
+            Создать бэкап сейчас
+          </Button>
+        </div>
       </Card>
 
       <Card className="border-red-200 bg-red-50/50">
