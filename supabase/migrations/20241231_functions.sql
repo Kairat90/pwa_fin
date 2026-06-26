@@ -497,7 +497,8 @@ DECLARE
     tx_row transactions%ROWTYPE;
     new_remaining DECIMAL;
 BEGIN
-    SELECT d.* INTO debt_row FROM debts d WHERE d.id = debt_id AND d.user_id = uid;
+    SELECT d.* INTO debt_row FROM debts d
+    WHERE d.id = add_debt_payment.debt_id AND d.user_id = uid;
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Долг не найден';
     END IF;
@@ -507,15 +508,21 @@ BEGIN
     END IF;
 
     SELECT COALESCE(SUM(dp.amount), 0) INTO paid_amount
-    FROM debt_payments dp WHERE dp.debt_id = debt_id;
+    FROM debt_payments dp
+    WHERE dp.debt_id = add_debt_payment.debt_id;
 
     remaining_amount := debt_row.amount - paid_amount;
 
     INSERT INTO debt_payments (debt_id, amount, date, note)
-    VALUES (debt_id, amount, date, note)
+    VALUES (
+        add_debt_payment.debt_id,
+        add_debt_payment.amount,
+        add_debt_payment.date,
+        add_debt_payment.note
+    )
     RETURNING * INTO payment_row;
 
-    IF create_transaction AND debt_row.account_id IS NOT NULL THEN
+    IF add_debt_payment.create_transaction AND debt_row.account_id IS NOT NULL THEN
         category_name := CASE WHEN debt_row.type = 'iOwe' THEN 'Долги' ELSE 'Возврат долгов' END;
 
         SELECT id INTO category_id FROM categories
@@ -525,13 +532,14 @@ BEGIN
         IF category_id IS NOT NULL THEN
             SELECT * INTO contact_row FROM contacts WHERE id = debt_row.contact_id;
 
-            tx_amount := CASE WHEN debt_row.type = 'iOwe' THEN -amount ELSE amount END;
+            tx_amount := CASE WHEN debt_row.type = 'iOwe'
+                THEN -add_debt_payment.amount ELSE add_debt_payment.amount END;
 
             INSERT INTO transactions (user_id, account_id, category_id, amount, date, note, tags)
             VALUES (
-                uid, debt_row.account_id, category_id, tx_amount, date,
+                uid, debt_row.account_id, category_id, tx_amount, add_debt_payment.date,
                 'Платеж по долгу: ' || contact_row.name ||
-                CASE WHEN note IS NOT NULL THEN ': ' || note ELSE '' END,
+                CASE WHEN add_debt_payment.note IS NOT NULL THEN ': ' || add_debt_payment.note ELSE '' END,
                 ARRAY['debt', 'payment']
             )
             RETURNING * INTO tx_row;
@@ -540,10 +548,11 @@ BEGIN
         END IF;
     END IF;
 
-    new_remaining := remaining_amount - amount;
+    new_remaining := remaining_amount - add_debt_payment.amount;
 
     IF new_remaining <= 0 THEN
-        UPDATE debts SET status = 'settled', settled_date = NOW() WHERE id = debt_id;
+        UPDATE debts SET status = 'settled', settled_date = NOW()
+        WHERE id = add_debt_payment.debt_id;
     END IF;
 
     RETURN jsonb_build_object(

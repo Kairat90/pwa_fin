@@ -3,12 +3,12 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
-import { format } from 'date-fns'
 import { Transaction, Account, Category } from '../../types'
 import { supabaseApi, getErrorMessage } from '../../api/supabase'
 import { formatCurrency } from '../../utils/currency'
 import { cn } from '../../utils/cn'
 import { buildCategoryTree, flattenCategoryTree, formatCategoryOptionLabel } from '../../utils/categoryTree'
+import { dateInputToIso, toDateInputValue } from '../../utils/dateInput'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Modal } from '../ui/Modal'
@@ -56,7 +56,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
     resolver: zodResolver(transactionSchema),
     defaultValues: {
       accountId: defaultAccountId || '',
-      date: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+      date: toDateInputValue(),
       isExcludedFromBudget: false
     }
   })
@@ -69,7 +69,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         accountId: transaction.accountId,
         categoryId: transaction.categoryId || '',
         amount: Math.abs(Number(transaction.amount)),
-        date: format(new Date(transaction.date), "yyyy-MM-dd'T'HH:mm"),
+        date: toDateInputValue(transaction.date),
         note: transaction.note || '',
         tags: transaction.tags.join(', '),
         isExcludedFromBudget: transaction.isExcludedFromBudget || false
@@ -79,7 +79,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         accountId: defaultAccountId || '',
         categoryId: '',
         amount: undefined,
-        date: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+        date: toDateInputValue(),
         note: '',
         tags: '',
         isExcludedFromBudget: false
@@ -116,7 +116,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         accountId: data.accountId,
         categoryId: data.categoryId,
         amount: data.amount,
-        date: new Date(data.date).toISOString(),
+        date: dateInputToIso(data.date),
         note: data.note,
         tags: data.tags ? data.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
         isExcludedFromBudget: data.isExcludedFromBudget
@@ -205,7 +205,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Дата</label>
               <input
-                type="datetime-local"
+                type="date"
                 className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 {...register('date')}
               />

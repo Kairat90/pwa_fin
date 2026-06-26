@@ -24,7 +24,118 @@
 -- #####################################################################
 
 -- =====================================================
--- ФУНКЦИЯ: init_system_categories (системные категории)
+-- ФУНКЦИЯ: upsert_user_category (вставка/обновление категории)
+-- =====================================================
+CREATE OR REPLACE FUNCTION public.upsert_user_category(
+    p_user_id UUID,
+    p_name TEXT,
+    p_type TEXT,
+    p_parent_id UUID,
+    p_sort_order INTEGER,
+    p_icon TEXT DEFAULT '📁',
+    p_color TEXT DEFAULT '#6B7280',
+    p_is_system BOOLEAN DEFAULT FALSE
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_id UUID;
+BEGIN
+    SELECT id INTO v_id
+    FROM public.categories
+    WHERE user_id = p_user_id
+      AND name = p_name
+      AND type = p_type
+      AND parent_id IS NOT DISTINCT FROM p_parent_id;
+
+    IF v_id IS NULL THEN
+        INSERT INTO public.categories (
+            user_id, name, type, parent_id, sort_order, icon, color, is_system
+        )
+        VALUES (
+            p_user_id, p_name, p_type, p_parent_id, p_sort_order, p_icon, p_color, p_is_system
+        )
+        RETURNING id INTO v_id;
+    ELSE
+        UPDATE public.categories
+        SET sort_order = p_sort_order,
+            icon = COALESCE(icon, p_icon),
+            color = COALESCE(color, p_color),
+            is_system = p_is_system OR categories.is_system
+        WHERE id = v_id;
+    END IF;
+
+    RETURN v_id;
+END;
+$$;
+
+-- =====================================================
+-- ФУНКЦИЯ: reorder_category (изменение порядка)
+-- =====================================================
+CREATE OR REPLACE FUNCTION public.reorder_category(
+    p_category_id UUID,
+    p_direction TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    uid UUID := auth.uid();
+    cur RECORD;
+    neighbor RECORD;
+BEGIN
+    SELECT * INTO cur
+    FROM public.categories
+    WHERE id = p_category_id AND user_id = uid;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Категория не найдена';
+    END IF;
+
+    IF p_direction = 'up' THEN
+        SELECT * INTO neighbor
+        FROM public.categories
+        WHERE user_id = uid
+          AND type = cur.type
+          AND parent_id IS NOT DISTINCT FROM cur.parent_id
+          AND (
+            sort_order < cur.sort_order
+            OR (sort_order = cur.sort_order AND name < cur.name)
+          )
+        ORDER BY sort_order DESC, name DESC
+        LIMIT 1;
+    ELSIF p_direction = 'down' THEN
+        SELECT * INTO neighbor
+        FROM public.categories
+        WHERE user_id = uid
+          AND type = cur.type
+          AND parent_id IS NOT DISTINCT FROM cur.parent_id
+          AND (
+            sort_order > cur.sort_order
+            OR (sort_order = cur.sort_order AND name > cur.name)
+          )
+        ORDER BY sort_order ASC, name ASC
+        LIMIT 1;
+    ELSE
+        RAISE EXCEPTION 'Неверное направление: %', p_direction;
+    END IF;
+
+    IF NOT FOUND THEN
+        RETURN;
+    END IF;
+
+    UPDATE public.categories SET sort_order = neighbor.sort_order WHERE id = cur.id;
+    UPDATE public.categories SET sort_order = cur.sort_order WHERE id = neighbor.id;
+END;
+$$;
+
+-- =====================================================
+-- ФУНКЦИЯ: init_system_categories (категории по умолчанию)
 -- =====================================================
 CREATE OR REPLACE FUNCTION public.init_system_categories(p_user_id UUID DEFAULT auth.uid())
 RETURNS VOID
@@ -33,36 +144,124 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-    cat RECORD;
+    uid UUID := p_user_id;
+    p UUID;
 BEGIN
-    IF p_user_id IS NULL THEN
+    IF uid IS NULL THEN
         RAISE EXCEPTION 'Пользователь не авторизован';
     END IF;
 
-    FOR cat IN
-        SELECT * FROM (VALUES
-            ('Долги', 'expense', '💳', TRUE, '#EF4444'),
-            ('Возврат долгов', 'income', '💰', TRUE, '#10B981'),
-            ('Переводы', 'expense', '🔄', TRUE, '#6B7280'),
-            ('Зарплата', 'income', '💵', FALSE, '#4F46E5'),
-            ('Продукты', 'expense', '🛒', FALSE, '#F59E0B'),
-            ('Транспорт', 'expense', '🚗', FALSE, '#8B5CF6'),
-            ('Развлечения', 'expense', '🎬', FALSE, '#EC4899'),
-            ('Здоровье', 'expense', '🏥', FALSE, '#14B8A6'),
-            ('Образование', 'expense', '📚', FALSE, '#F97316'),
-            ('Одежда', 'expense', '👕', FALSE, '#8B5CF6')
-        ) AS t(name, type, icon, is_system, color)
-    LOOP
-        IF NOT EXISTS (
-            SELECT 1 FROM categories
-            WHERE user_id = p_user_id
-            AND name = cat.name
-            AND is_system = cat.is_system
-        ) THEN
-            INSERT INTO categories (user_id, name, type, icon, color, is_system)
-            VALUES (p_user_id, cat.name, cat.type, cat.icon, cat.color, cat.is_system);
-        END IF;
-    END LOOP;
+    -- Служебные (для долгов и переводов)
+    PERFORM public.upsert_user_category(uid, 'Возврат долгов', 'income', NULL, 9000, '💰', '#10B981', TRUE);
+    PERFORM public.upsert_user_category(uid, 'Долги', 'expense', NULL, 9000, '💳', '#EF4444', TRUE);
+    PERFORM public.upsert_user_category(uid, 'Переводы', 'expense', NULL, 9001, '🔄', '#6B7280', TRUE);
+
+    -- === ДОХОДЫ (по алфавиту) ===
+    PERFORM public.upsert_user_category(uid, 'Долг', 'income', NULL, 0, '💳', '#10B981', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Другое', 'income', NULL, 1, '📋', '#6B7280', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Зарплата', 'income', NULL, 2, '💵', '#4F46E5', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Подарок', 'income', NULL, 3, '🎁', '#EC4899', FALSE);
+
+    -- === РАСХОДЫ: родители по алфавиту ===
+
+    -- Авто
+    p := public.upsert_user_category(uid, 'Авто', 'expense', NULL, 0, '🚗', '#8B5CF6', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Автоаксессуары/Инструмент', 'expense', p, 0, '🔧', '#8B5CF6', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Налоги/Пошлины', 'expense', p, 1, '📋', '#8B5CF6', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Обслуживание', 'expense', p, 2, '🛠️', '#8B5CF6', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Покупка авто', 'expense', p, 3, '🚙', '#8B5CF6', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Ремонт/Запчасти', 'expense', p, 4, '⚙️', '#8B5CF6', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Топливо', 'expense', p, 5, '⛽', '#8B5CF6', FALSE);
+
+    -- Банк
+    p := public.upsert_user_category(uid, 'Банк', 'expense', NULL, 1, '🏦', '#4F46E5', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Комиссия', 'expense', p, 0, '💳', '#4F46E5', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Оплата услуг банка', 'expense', p, 1, '🏧', '#4F46E5', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Проценты', 'expense', p, 2, '📈', '#4F46E5', FALSE);
+
+    -- Гаджеты/Компьютеры
+    PERFORM public.upsert_user_category(uid, 'Гаджеты/Компьютеры', 'expense', NULL, 2, '💻', '#6366F1', FALSE);
+
+    -- Дом
+    p := public.upsert_user_category(uid, 'Дом', 'expense', NULL, 3, '🏠', '#F59E0B', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Аренда', 'expense', p, 0, '🔑', '#F59E0B', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Бытовая техника', 'expense', p, 1, '📺', '#F59E0B', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Инструмент', 'expense', p, 2, '🔨', '#F59E0B', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Мебель', 'expense', p, 3, '🛋️', '#F59E0B', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Посуда', 'expense', p, 4, '🍽️', '#F59E0B', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Ремонт', 'expense', p, 5, '🧱', '#F59E0B', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Электроприборы', 'expense', p, 6, '💡', '#F59E0B', FALSE);
+
+    -- Еда
+    p := public.upsert_user_category(uid, 'Еда', 'expense', NULL, 4, '🍽️', '#EF4444', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Кафе', 'expense', p, 0, '☕', '#EF4444', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Обед', 'expense', p, 1, '🍱', '#EF4444', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Продукты', 'expense', p, 2, '🛒', '#EF4444', FALSE);
+
+    -- Коммунальные услуги
+    p := public.upsert_user_category(uid, 'Коммунальные услуги', 'expense', NULL, 5, '💡', '#14B8A6', FALSE);
+    PERFORM public.upsert_user_category(uid, 'ОСИ/КСК', 'expense', p, 0, '🏢', '#14B8A6', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Электроенергия/вода/газ', 'expense', p, 1, '⚡', '#14B8A6', FALSE);
+
+    -- Красота и здоровье
+    p := public.upsert_user_category(uid, 'Красота и здоровье', 'expense', NULL, 6, '💊', '#EC4899', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Гигиена', 'expense', p, 0, '🧴', '#EC4899', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Зубы', 'expense', p, 1, '🦷', '#EC4899', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Лекарства', 'expense', p, 2, '💊', '#EC4899', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Лечение', 'expense', p, 3, '🏥', '#EC4899', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Массаж', 'expense', p, 4, '💆', '#EC4899', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Стрижка', 'expense', p, 5, '✂️', '#EC4899', FALSE);
+
+    -- Личное
+    p := public.upsert_user_category(uid, 'Личное', 'expense', NULL, 7, '👤', '#8B5CF6', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Благотворительность', 'expense', p, 0, '❤️', '#8B5CF6', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Накопления/Копилка', 'expense', p, 1, '🐷', '#8B5CF6', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Подарки', 'expense', p, 2, '🎁', '#8B5CF6', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Подписки', 'expense', p, 3, '📱', '#8B5CF6', FALSE);
+
+    -- Налоги/Пошлины (верхний уровень)
+    PERFORM public.upsert_user_category(uid, 'Налоги/Пошлины', 'expense', NULL, 8, '📋', '#78716C', FALSE);
+
+    -- Одежда
+    p := public.upsert_user_category(uid, 'Одежда', 'expense', NULL, 9, '👕', '#A855F7', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Обувь', 'expense', p, 0, '👟', '#A855F7', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Одежда верхняя', 'expense', p, 1, '🧥', '#A855F7', FALSE);
+
+    -- Отдых
+    p := public.upsert_user_category(uid, 'Отдых', 'expense', NULL, 10, '🏖️', '#0EA5E9', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Выезд на природу', 'expense', p, 0, '🌲', '#0EA5E9', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Отель', 'expense', p, 1, '🏨', '#0EA5E9', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Рыбалка', 'expense', p, 2, '🎣', '#0EA5E9', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Тур', 'expense', p, 3, '✈️', '#0EA5E9', FALSE);
+
+    -- Развлечение
+    p := public.upsert_user_category(uid, 'Развлечение', 'expense', NULL, 11, '🎬', '#F97316', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Игрушки', 'expense', p, 0, '🧸', '#F97316', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Кино', 'expense', p, 1, '🎬', '#F97316', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Книги', 'expense', p, 2, '📚', '#F97316', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Концерт', 'expense', p, 3, '🎵', '#F97316', FALSE);
+
+    -- Семья
+    PERFORM public.upsert_user_category(uid, 'Семья', 'expense', NULL, 12, '👨‍👩‍👧', '#F472B6', FALSE);
+
+    -- Спорт
+    p := public.upsert_user_category(uid, 'Спорт', 'expense', NULL, 13, '🏋️', '#22C55E', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Бассейн', 'expense', p, 0, '🏊', '#22C55E', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Покупка тренажера', 'expense', p, 1, '🏋️', '#22C55E', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Тренажерный зал', 'expense', p, 2, '💪', '#22C55E', FALSE);
+
+    -- Транспорт
+    p := public.upsert_user_category(uid, 'Транспорт', 'expense', NULL, 14, '🚌', '#3B82F6', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Аренда транспорта', 'expense', p, 0, '🚐', '#3B82F6', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Общественный транспорт', 'expense', p, 1, '🚇', '#3B82F6', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Поезд', 'expense', p, 2, '🚆', '#3B82F6', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Самолет', 'expense', p, 3, '✈️', '#3B82F6', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Такси', 'expense', p, 4, '🚕', '#3B82F6', FALSE);
+
+    -- Услуги
+    p := public.upsert_user_category(uid, 'Услуги', 'expense', NULL, 15, '📞', '#64748B', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Интернет(домашний/Мобильный)', 'expense', p, 0, '🌐', '#64748B', FALSE);
+    PERFORM public.upsert_user_category(uid, 'Мобильная связь', 'expense', p, 1, '📱', '#64748B', FALSE);
 END;
 $$;
 
@@ -526,7 +725,8 @@ DECLARE
     tx_row transactions%ROWTYPE;
     new_remaining DECIMAL;
 BEGIN
-    SELECT d.* INTO debt_row FROM debts d WHERE d.id = debt_id AND d.user_id = uid;
+    SELECT d.* INTO debt_row FROM debts d
+    WHERE d.id = add_debt_payment.debt_id AND d.user_id = uid;
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Долг не найден';
     END IF;
@@ -536,15 +736,21 @@ BEGIN
     END IF;
 
     SELECT COALESCE(SUM(dp.amount), 0) INTO paid_amount
-    FROM debt_payments dp WHERE dp.debt_id = debt_id;
+    FROM debt_payments dp
+    WHERE dp.debt_id = add_debt_payment.debt_id;
 
     remaining_amount := debt_row.amount - paid_amount;
 
     INSERT INTO debt_payments (debt_id, amount, date, note)
-    VALUES (debt_id, amount, date, note)
+    VALUES (
+        add_debt_payment.debt_id,
+        add_debt_payment.amount,
+        add_debt_payment.date,
+        add_debt_payment.note
+    )
     RETURNING * INTO payment_row;
 
-    IF create_transaction AND debt_row.account_id IS NOT NULL THEN
+    IF add_debt_payment.create_transaction AND debt_row.account_id IS NOT NULL THEN
         category_name := CASE WHEN debt_row.type = 'iOwe' THEN 'Долги' ELSE 'Возврат долгов' END;
 
         SELECT id INTO category_id FROM categories
@@ -554,13 +760,14 @@ BEGIN
         IF category_id IS NOT NULL THEN
             SELECT * INTO contact_row FROM contacts WHERE id = debt_row.contact_id;
 
-            tx_amount := CASE WHEN debt_row.type = 'iOwe' THEN -amount ELSE amount END;
+            tx_amount := CASE WHEN debt_row.type = 'iOwe'
+                THEN -add_debt_payment.amount ELSE add_debt_payment.amount END;
 
             INSERT INTO transactions (user_id, account_id, category_id, amount, date, note, tags)
             VALUES (
-                uid, debt_row.account_id, category_id, tx_amount, date,
+                uid, debt_row.account_id, category_id, tx_amount, add_debt_payment.date,
                 'Платеж по долгу: ' || contact_row.name ||
-                CASE WHEN note IS NOT NULL THEN ': ' || note ELSE '' END,
+                CASE WHEN add_debt_payment.note IS NOT NULL THEN ': ' || add_debt_payment.note ELSE '' END,
                 ARRAY['debt', 'payment']
             )
             RETURNING * INTO tx_row;
@@ -569,10 +776,11 @@ BEGIN
         END IF;
     END IF;
 
-    new_remaining := remaining_amount - amount;
+    new_remaining := remaining_amount - add_debt_payment.amount;
 
     IF new_remaining <= 0 THEN
-        UPDATE debts SET status = 'settled', settled_date = NOW() WHERE id = debt_id;
+        UPDATE debts SET status = 'settled', settled_date = NOW()
+        WHERE id = add_debt_payment.debt_id;
     END IF;
 
     RETURN jsonb_build_object(
@@ -999,9 +1207,246 @@ $$;
 
 
 -- #####################################################################
+-- ФУНКЦИЯ: restore_user_backup (восстановление из JSON)
+-- #####################################################################
+CREATE OR REPLACE FUNCTION public.restore_user_backup(p_backup JSONB)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    uid UUID := auth.uid();
+    row_data JSONB;
+BEGIN
+    IF uid IS NULL THEN
+        RAISE EXCEPTION 'Пользователь не авторизован';
+    END IF;
+
+    IF p_backup IS NULL OR p_backup->>'version' IS NULL THEN
+        RAISE EXCEPTION 'Неверный формат бэкапа';
+    END IF;
+
+    DELETE FROM public.debt_payments
+    WHERE debt_id IN (SELECT id FROM public.debts WHERE user_id = uid);
+
+    DELETE FROM public.debts WHERE user_id = uid;
+    DELETE FROM public.scheduled_transactions WHERE user_id = uid;
+    DELETE FROM public.transfers WHERE user_id = uid;
+    DELETE FROM public.transactions WHERE user_id = uid;
+    DELETE FROM public.categories WHERE user_id = uid;
+    DELETE FROM public.contacts WHERE user_id = uid;
+    DELETE FROM public.accounts WHERE user_id = uid;
+
+    FOR row_data IN
+        SELECT * FROM jsonb_array_elements(COALESCE(p_backup->'accounts', '[]'::jsonb))
+    LOOP
+        INSERT INTO public.accounts (
+            id, user_id, name, currency, initial_balance, icon, color, type, is_archived, created_at, updated_at
+        )
+        VALUES (
+            (row_data->>'id')::UUID,
+            uid,
+            row_data->>'name',
+            COALESCE(row_data->>'currency', 'KZT'),
+            COALESCE((row_data->>'initial_balance')::DECIMAL, 0),
+            row_data->>'icon',
+            row_data->>'color',
+            row_data->>'type',
+            COALESCE((row_data->>'is_archived')::BOOLEAN, FALSE),
+            COALESCE((row_data->>'created_at')::TIMESTAMPTZ, NOW()),
+            COALESCE((row_data->>'updated_at')::TIMESTAMPTZ, NOW())
+        );
+    END LOOP;
+
+    FOR row_data IN
+        SELECT * FROM jsonb_array_elements(COALESCE(p_backup->'categories', '[]'::jsonb))
+    LOOP
+        INSERT INTO public.categories (
+            id, user_id, name, icon, color, type, parent_id, is_system, sort_order, created_at, updated_at
+        )
+        VALUES (
+            (row_data->>'id')::UUID,
+            uid,
+            row_data->>'name',
+            row_data->>'icon',
+            row_data->>'color',
+            row_data->>'type',
+            NULL,
+            COALESCE((row_data->>'is_system')::BOOLEAN, FALSE),
+            COALESCE((row_data->>'sort_order')::INTEGER, 0),
+            COALESCE((row_data->>'created_at')::TIMESTAMPTZ, NOW()),
+            COALESCE((row_data->>'updated_at')::TIMESTAMPTZ, NOW())
+        );
+    END LOOP;
+
+    FOR row_data IN
+        SELECT * FROM jsonb_array_elements(COALESCE(p_backup->'categories', '[]'::jsonb))
+    LOOP
+        IF row_data->>'parent_id' IS NOT NULL AND row_data->>'parent_id' <> '' THEN
+            UPDATE public.categories
+            SET parent_id = (row_data->>'parent_id')::UUID
+            WHERE id = (row_data->>'id')::UUID AND user_id = uid;
+        END IF;
+    END LOOP;
+
+    FOR row_data IN
+        SELECT * FROM jsonb_array_elements(COALESCE(p_backup->'contacts', '[]'::jsonb))
+    LOOP
+        INSERT INTO public.contacts (
+            id, user_id, name, phone, email, note, avatar_data, is_favorite, created_at, updated_at
+        )
+        VALUES (
+            (row_data->>'id')::UUID,
+            uid,
+            row_data->>'name',
+            row_data->>'phone',
+            row_data->>'email',
+            row_data->>'note',
+            CASE
+                WHEN row_data->'avatar_data' IS NULL OR row_data->'avatar_data' = 'null'::jsonb THEN NULL
+                ELSE (row_data->>'avatar_data')::BYTEA
+            END,
+            COALESCE((row_data->>'is_favorite')::BOOLEAN, FALSE),
+            COALESCE((row_data->>'created_at')::TIMESTAMPTZ, NOW()),
+            COALESCE((row_data->>'updated_at')::TIMESTAMPTZ, NOW())
+        );
+    END LOOP;
+
+    FOR row_data IN
+        SELECT * FROM jsonb_array_elements(COALESCE(p_backup->'debts', '[]'::jsonb))
+    LOOP
+        INSERT INTO public.debts (
+            id, user_id, contact_id, account_id, amount, currency, type, status,
+            date_taken, due_date, settled_date, purpose, interest_rate, is_in_budget, reminder_days,
+            created_at, updated_at
+        )
+        VALUES (
+            (row_data->>'id')::UUID,
+            uid,
+            (row_data->>'contact_id')::UUID,
+            NULLIF(row_data->>'account_id', '')::UUID,
+            (row_data->>'amount')::DECIMAL,
+            row_data->>'currency',
+            row_data->>'type',
+            COALESCE(row_data->>'status', 'active'),
+            (row_data->>'date_taken')::TIMESTAMPTZ,
+            NULLIF(row_data->>'due_date', '')::TIMESTAMPTZ,
+            NULLIF(row_data->>'settled_date', '')::TIMESTAMPTZ,
+            row_data->>'purpose',
+            NULLIF(row_data->>'interest_rate', '')::REAL,
+            COALESCE((row_data->>'is_in_budget')::BOOLEAN, TRUE),
+            COALESCE((row_data->>'reminder_days')::INTEGER, 3),
+            COALESCE((row_data->>'created_at')::TIMESTAMPTZ, NOW()),
+            COALESCE((row_data->>'updated_at')::TIMESTAMPTZ, NOW())
+        );
+    END LOOP;
+
+    FOR row_data IN
+        SELECT * FROM jsonb_array_elements(COALESCE(p_backup->'transactions', '[]'::jsonb))
+    LOOP
+        INSERT INTO public.transactions (
+            id, user_id, account_id, category_id, amount, date, note, tags,
+            is_excluded_from_budget, is_scheduled, created_at, updated_at
+        )
+        VALUES (
+            (row_data->>'id')::UUID,
+            uid,
+            (row_data->>'account_id')::UUID,
+            NULLIF(row_data->>'category_id', '')::UUID,
+            (row_data->>'amount')::DECIMAL,
+            (row_data->>'date')::TIMESTAMPTZ,
+            row_data->>'note',
+            COALESCE(
+                ARRAY(SELECT jsonb_array_elements_text(COALESCE(row_data->'tags', '[]'::jsonb))),
+                '{}'::TEXT[]
+            ),
+            COALESCE((row_data->>'is_excluded_from_budget')::BOOLEAN, FALSE),
+            COALESCE((row_data->>'is_scheduled')::BOOLEAN, FALSE),
+            COALESCE((row_data->>'created_at')::TIMESTAMPTZ, NOW()),
+            COALESCE((row_data->>'updated_at')::TIMESTAMPTZ, NOW())
+        );
+    END LOOP;
+
+    FOR row_data IN
+        SELECT * FROM jsonb_array_elements(COALESCE(p_backup->'transfers', '[]'::jsonb))
+    LOOP
+        INSERT INTO public.transfers (
+            id, user_id, from_account_id, to_account_id, amount, converted_amount, fee,
+            date, note, status, created_at, updated_at
+        )
+        VALUES (
+            (row_data->>'id')::UUID,
+            uid,
+            (row_data->>'from_account_id')::UUID,
+            (row_data->>'to_account_id')::UUID,
+            (row_data->>'amount')::DECIMAL,
+            NULLIF(row_data->>'converted_amount', '')::DECIMAL,
+            COALESCE((row_data->>'fee')::DECIMAL, 0),
+            (row_data->>'date')::TIMESTAMPTZ,
+            row_data->>'note',
+            COALESCE(row_data->>'status', 'completed'),
+            COALESCE((row_data->>'created_at')::TIMESTAMPTZ, NOW()),
+            COALESCE((row_data->>'updated_at')::TIMESTAMPTZ, NOW())
+        );
+    END LOOP;
+
+    FOR row_data IN
+        SELECT * FROM jsonb_array_elements(COALESCE(p_backup->'scheduled_transactions', '[]'::jsonb))
+    LOOP
+        INSERT INTO public.scheduled_transactions (
+            id, user_id, account_id, category_id, title, amount, type,
+            start_date, end_date, frequency, custom_days, next_execution_date,
+            is_active, note, last_executed_date, created_at, updated_at
+        )
+        VALUES (
+            (row_data->>'id')::UUID,
+            uid,
+            (row_data->>'account_id')::UUID,
+            NULLIF(row_data->>'category_id', '')::UUID,
+            row_data->>'title',
+            (row_data->>'amount')::DECIMAL,
+            row_data->>'type',
+            (row_data->>'start_date')::TIMESTAMPTZ,
+            NULLIF(row_data->>'end_date', '')::TIMESTAMPTZ,
+            row_data->>'frequency',
+            NULLIF(row_data->>'custom_days', '')::INTEGER,
+            (row_data->>'next_execution_date')::TIMESTAMPTZ,
+            COALESCE((row_data->>'is_active')::BOOLEAN, TRUE),
+            row_data->>'note',
+            NULLIF(row_data->>'last_executed_date', '')::TIMESTAMPTZ,
+            COALESCE((row_data->>'created_at')::TIMESTAMPTZ, NOW()),
+            COALESCE((row_data->>'updated_at')::TIMESTAMPTZ, NOW())
+        );
+    END LOOP;
+
+    FOR row_data IN
+        SELECT * FROM jsonb_array_elements(COALESCE(p_backup->'debt_payments', '[]'::jsonb))
+    LOOP
+        INSERT INTO public.debt_payments (
+            id, debt_id, amount, date, note, transaction_id, created_at, updated_at
+        )
+        VALUES (
+            (row_data->>'id')::UUID,
+            (row_data->>'debt_id')::UUID,
+            (row_data->>'amount')::DECIMAL,
+            (row_data->>'date')::TIMESTAMPTZ,
+            row_data->>'note',
+            NULLIF(row_data->>'transaction_id', '')::UUID,
+            COALESCE((row_data->>'created_at')::TIMESTAMPTZ, NOW()),
+            COALESCE((row_data->>'updated_at')::TIMESTAMPTZ, NOW())
+        );
+    END LOOP;
+END;
+$$;
+
+
+-- #####################################################################
 -- ПРАВА ДОСТУПА (роль authenticated)
 -- #####################################################################
 GRANT EXECUTE ON FUNCTION public.init_system_categories(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.reorder_category(UUID, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.upsert_user_category(UUID, TEXT, TEXT, UUID, INTEGER, TEXT, TEXT, BOOLEAN) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_total_balance() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_account_balance(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.create_transfer(UUID, UUID, DECIMAL, DECIMAL, TIMESTAMPTZ, TEXT) TO authenticated;
@@ -1019,3 +1464,4 @@ GRANT EXECUTE ON FUNCTION public.get_balance_history(DATE, DATE, UUID) TO authen
 GRANT EXECUTE ON FUNCTION public.get_top_transactions(DATE, DATE, INTEGER) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_comparison(DATE, DATE) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_forecast(INTEGER) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.restore_user_backup(JSONB) TO authenticated;

@@ -3,11 +3,11 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
-import { format } from 'date-fns'
 import { Debt, Account, Contact } from '../../types'
 import { supabaseApi, getErrorMessage } from '../../api/supabase'
 import { DEFAULT_CURRENCY } from '../../utils/currency'
 import { cn } from '../../utils/cn'
+import { dateInputToIso, optionalDateInputToIso, toDateInputValue } from '../../utils/dateInput'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Modal } from '../ui/Modal'
@@ -60,7 +60,7 @@ export const DebtForm: React.FC<DebtFormProps> = ({
     defaultValues: {
       currency: DEFAULT_CURRENCY,
       type: 'iOwe',
-      dateTaken: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+      dateTaken: toDateInputValue(),
       isInBudget: true,
       reminderDays: 3
     }
@@ -80,8 +80,8 @@ export const DebtForm: React.FC<DebtFormProps> = ({
         amount: Number(debt.amount),
         currency: debt.currency,
         type: debt.type,
-        dateTaken: format(new Date(debt.dateTaken), "yyyy-MM-dd'T'HH:mm"),
-        dueDate: debt.dueDate ? format(new Date(debt.dueDate), "yyyy-MM-dd'T'HH:mm") : '',
+        dateTaken: toDateInputValue(debt.dateTaken),
+        dueDate: debt.dueDate ? toDateInputValue(debt.dueDate) : '',
         purpose: debt.purpose || '',
         interestRate: debt.interestRate || undefined,
         isInBudget: debt.isInBudget,
@@ -94,7 +94,7 @@ export const DebtForm: React.FC<DebtFormProps> = ({
         amount: undefined,
         currency: DEFAULT_CURRENCY,
         type: 'iOwe',
-        dateTaken: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+        dateTaken: toDateInputValue(),
         dueDate: '',
         purpose: '',
         interestRate: undefined,
@@ -135,8 +135,8 @@ export const DebtForm: React.FC<DebtFormProps> = ({
         amount: data.amount,
         currency: data.currency,
         type: data.type,
-        dateTaken: new Date(data.dateTaken).toISOString(),
-        dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
+        dateTaken: dateInputToIso(data.dateTaken),
+        dueDate: optionalDateInputToIso(data.dueDate),
         purpose: data.purpose,
         interestRate: data.interestRate,
         isInBudget: data.isInBudget,
@@ -265,7 +265,7 @@ export const DebtForm: React.FC<DebtFormProps> = ({
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Дата взятия *</label>
               <input
-                type="datetime-local"
+                type="date"
                 className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 {...register('dateTaken')}
               />
@@ -277,7 +277,7 @@ export const DebtForm: React.FC<DebtFormProps> = ({
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Дата возврата</label>
               <input
-                type="datetime-local"
+                type="date"
                 className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 {...register('dueDate')}
               />
