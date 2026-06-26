@@ -29,6 +29,23 @@ const VALID_ACCOUNT_TYPES = new Set(['cash', 'card', 'investment', 'savings'])
 
 const INSERT_CHUNK = 150
 
+/** Максимальный размер файла бэкапа (15 МБ) */
+export const MAX_BACKUP_FILE_BYTES = 15 * 1024 * 1024
+
+/** Максимальное число строк в одной таблице бэкапа */
+const MAX_BACKUP_ROWS_PER_TABLE = 50_000
+
+/** RPC restore_user_backup недоступна — можно откатиться на клиент */
+function isRestoreRpcUnavailable(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error)
+
+  return (
+    /PGRST202/i.test(message) ||
+    (/restore_user_backup/i.test(message) &&
+      /(not find|does not exist|не найдена)/i.test(message))
+  )
+}
+
 /** Проверка формата файла бэкапа */
 export function validateBackup(data: unknown): BackupData {
   if (!data || typeof data !== 'object') {
@@ -47,6 +64,10 @@ export function validateBackup(data: unknown): BackupData {
     const value = backup[key]
     if (value !== undefined && !Array.isArray(value)) {
       throw new Error(`Неверный формат бэкапа: ${key}`)
+    }
+
+    if (Array.isArray(value) && value.length > MAX_BACKUP_ROWS_PER_TABLE) {
+      throw new Error(`Слишком много записей в ${key} (максимум ${MAX_BACKUP_ROWS_PER_TABLE})`)
     }
   }
 
@@ -231,8 +252,10 @@ export async function restoreBackupData(data: unknown): Promise<void> {
   try {
     await restoreBackupViaRpc(backup)
     return
-  } catch {
-    // RPC недоступен или вернул ошибку — восстановление через API
+  } catch (error) {
+    if (!isRestoreRpcUnavailable(error)) {
+      throw error
+    }
   }
 
   await restoreBackupViaClient(backup, userId)

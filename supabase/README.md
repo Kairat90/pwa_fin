@@ -4,11 +4,14 @@
 
 ## 2. Выполните SQL-миграции
 
-В **SQL Editor** по порядку:
+В **SQL Editor** по порядку (все файлы из `supabase/migrations/`):
 
-1. `supabase/migrations/20241230_initial_schema.sql`
-2. `supabase/migrations/20241231_functions.sql`
-3. `supabase/seed.sql` (опционально)
+1. `20241230_initial_schema.sql`
+2. `20241231_functions.sql`
+3. `20250101` … `20250109` (по дате в имени файла)
+4. **`20250110_security_rls_and_rpc.sql`** — RLS по FK, защита RPC
+
+Опционально: `supabase/seed.sql`
 
 ## 3. Настройте Auth
 

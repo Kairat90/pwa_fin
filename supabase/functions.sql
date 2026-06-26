@@ -20,6 +20,51 @@
 
 
 -- #####################################################################
+-- 0. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ RLS (миграция 20250110)
+-- #####################################################################
+
+CREATE OR REPLACE FUNCTION public.current_user_owns_account(p_account_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SET search_path = public
+AS $$
+    SELECT EXISTS (
+        SELECT 1 FROM public.accounts
+        WHERE id = p_account_id AND user_id = auth.uid()
+    );
+$$;
+
+CREATE OR REPLACE FUNCTION public.current_user_owns_category(p_category_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SET search_path = public
+AS $$
+    SELECT EXISTS (
+        SELECT 1 FROM public.categories
+        WHERE id = p_category_id AND user_id = auth.uid()
+    );
+$$;
+
+CREATE OR REPLACE FUNCTION public.current_user_owns_contact(p_contact_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SET search_path = public
+AS $$
+    SELECT EXISTS (
+        SELECT 1 FROM public.contacts
+        WHERE id = p_contact_id AND user_id = auth.uid()
+    );
+$$;
+
+GRANT EXECUTE ON FUNCTION public.current_user_owns_account(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.current_user_owns_category(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.current_user_owns_contact(UUID) TO authenticated;
+
+
+-- #####################################################################
 -- 1. БАЗОВЫЕ ФИНАНСОВЫЕ ОПЕРАЦИИ
 -- #####################################################################
 
@@ -44,6 +89,17 @@ AS $$
 DECLARE
     v_id UUID;
 BEGIN
+    IF auth.uid() IS NOT NULL AND p_user_id IS DISTINCT FROM auth.uid() THEN
+        RAISE EXCEPTION 'Недопустимый user_id';
+    END IF;
+
+    IF p_parent_id IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM public.categories
+        WHERE id = p_parent_id AND user_id = p_user_id
+    ) THEN
+        RAISE EXCEPTION 'Родительская категория не найдена';
+    END IF;
+
     SELECT id INTO v_id
     FROM public.categories
     WHERE user_id = p_user_id
@@ -144,11 +200,15 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-    uid UUID := p_user_id;
+    uid UUID := COALESCE(p_user_id, auth.uid());
     p UUID;
 BEGIN
     IF uid IS NULL THEN
         RAISE EXCEPTION 'Пользователь не авторизован';
+    END IF;
+
+    IF auth.uid() IS NOT NULL AND uid IS DISTINCT FROM auth.uid() THEN
+        RAISE EXCEPTION 'Недопустимый user_id';
     END IF;
 
     -- Служебные (для долгов и переводов)
@@ -1218,6 +1278,10 @@ AS $$
 DECLARE
     uid UUID := auth.uid();
     row_data JSONB;
+    v_tags TEXT[];
+    v_avatar BYTEA;
+    v_has_sort_order BOOLEAN;
+    v_debt_id UUID;
 BEGIN
     IF uid IS NULL THEN
         RAISE EXCEPTION 'Пользователь не авторизован';
@@ -1423,12 +1487,21 @@ BEGIN
     FOR row_data IN
         SELECT * FROM jsonb_array_elements(COALESCE(p_backup->'debt_payments', '[]'::jsonb))
     LOOP
+        v_debt_id := (row_data->>'debt_id')::UUID;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM public.debts
+            WHERE id = v_debt_id AND user_id = uid
+        ) THEN
+            RAISE EXCEPTION 'Платёж ссылается на чужой или несуществующий долг: %', v_debt_id;
+        END IF;
+
         INSERT INTO public.debt_payments (
             id, debt_id, amount, date, note, transaction_id, created_at, updated_at
         )
         VALUES (
             (row_data->>'id')::UUID,
-            (row_data->>'debt_id')::UUID,
+            v_debt_id,
             (row_data->>'amount')::DECIMAL,
             (row_data->>'date')::TIMESTAMPTZ,
             row_data->>'note',
@@ -1437,6 +1510,10 @@ BEGIN
             COALESCE((row_data->>'updated_at')::TIMESTAMPTZ, NOW())
         );
     END LOOP;
+
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE EXCEPTION 'Ошибка восстановления: %', SQLERRM;
 END;
 $$;
 

@@ -24,6 +24,7 @@ import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { cn } from '../utils/cn'
+import { MAX_BACKUP_FILE_BYTES } from '../utils/restoreBackup'
 
 const ReportsPage: React.FC = () => {
   const queryClient = useQueryClient()
@@ -134,6 +135,11 @@ const ReportsPage: React.FC = () => {
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0]
       if (!file) return
+
+      if (file.size > MAX_BACKUP_FILE_BYTES) {
+        toast.error(`Файл слишком большой (максимум ${Math.round(MAX_BACKUP_FILE_BYTES / 1024 / 1024)} МБ)`)
+        return
+      }
 
       try {
         setRestoreLoading(true)

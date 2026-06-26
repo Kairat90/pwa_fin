@@ -13,6 +13,7 @@ import {
 } from '../types'
 import { mapKeys, toSnakeCase } from '../utils/supabaseMappers'
 import { normalizeCategory } from '../utils/categoryTree'
+import { buildIlikeOrFilter, buildUuidEqOrFilter } from '../utils/postgrestFilter'
 import { restoreBackupData, validateBackup } from '../utils/restoreBackup'
 
 const AUTH_CODE_MESSAGES: Record<string, string> = {
@@ -524,7 +525,7 @@ export const supabaseApi = {
       if (filters?.startDate) query = query.gte('date', filters.startDate)
       if (filters?.endDate) query = query.lte('date', filters.endDate)
       if (filters?.accountId) {
-        query = query.or(`from_account_id.eq.${filters.accountId},to_account_id.eq.${filters.accountId}`)
+        query = query.or(buildUuidEqOrFilter('from_account_id', 'to_account_id', filters.accountId))
       }
 
       const { data, error } = await query
@@ -644,8 +645,11 @@ export const supabaseApi = {
         .order('name', { ascending: true })
 
       if (filters?.search) {
-        const s = filters.search
-        query = query.or(`name.ilike.%${s}%,phone.ilike.%${s}%,email.ilike.%${s}%`)
+        const orFilter = buildIlikeOrFilter(['name', 'phone', 'email'], filters.search)
+
+        if (orFilter) {
+          query = query.or(orFilter)
+        }
       }
       if (filters?.isFavorite !== undefined) {
         query = query.eq('is_favorite', filters.isFavorite)
