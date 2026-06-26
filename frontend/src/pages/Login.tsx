@@ -55,8 +55,8 @@ const Login: React.FC = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 rounded-full mb-4">
             <LogIn className="w-8 h-8 text-primary-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Добро пожаловать</h1>
-          <p className="text-gray-600 mt-1">Войдите в свой аккаунт</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Добро пожаловать</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">Войдите в свой аккаунт</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -78,6 +78,15 @@ const Login: React.FC = () => {
             {...register('password')}
           />
 
+          <div className="flex justify-end -mt-2">
+            <Link
+              to="/forgot-password"
+              className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
+            >
+              Забыли пароль?
+            </Link>
+          </div>
+
           <Button
             type="submit"
             fullWidth
@@ -88,7 +97,7 @@ const Login: React.FC = () => {
           </Button>
         </form>
 
-        <p className="text-center text-sm text-gray-600 mt-6">
+        <p className="text-center text-sm text-gray-600 dark:text-gray-400 mt-6">
           Нет аккаунта?{' '}
           <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium">
             Зарегистрироваться

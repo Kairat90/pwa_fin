@@ -25,7 +25,13 @@ const AUTH_CODE_MESSAGES: Record<string, string> = {
   over_email_send_rate_limit: 'Слишком много попыток. Подождите несколько минут',
   email_address_invalid: 'Некорректный email',
   validation_failed: 'Данные не прошли проверку. Проверьте email и пароль',
-  email_not_confirmed: 'Подтвердите email по ссылке из письма, затем войдите'
+  email_not_confirmed: 'Подтвердите email по ссылке из письма, затем войдите',
+  user_not_found: 'Пользователь с таким email не найден'
+}
+
+/** URL для возврата после ссылки из письма Supabase */
+function getAuthRedirectUrl(path: string): string {
+  return `${window.location.origin}${path}`
 }
 
 /** Форматирует ошибку Supabase Auth */
@@ -335,6 +341,14 @@ export const supabaseApi = {
 
     changePassword: async (newPassword: string): Promise<void> => {
       const { error } = await supabase.auth.updateUser({ password: newPassword })
+      if (error) throw new Error(formatAuthError(error))
+    },
+
+    /** Отправка письма со ссылкой для сброса пароля */
+    requestPasswordReset: async (email: string): Promise<void> => {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: getAuthRedirectUrl('/reset-password')
+      })
       if (error) throw new Error(formatAuthError(error))
     },
 
