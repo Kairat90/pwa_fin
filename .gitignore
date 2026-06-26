@@ -1,0 +1,17 @@
+# Секреты и локальные переменные окружения — не коммитить
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Зависимости и сборка
+node_modules/
+dist/
+*.log
+*.tsbuildinfo
+
+# ОС и IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

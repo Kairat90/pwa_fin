@@ -18,10 +18,16 @@
 ## 4. Переменные окружения фронтенда
 
 ```bash
-cp .env.supabase frontend/.env
+cd frontend
+cp .env.example .env
 ```
 
-Заполните `VITE_SUPABASE_URL` и `VITE_SUPABASE_ANON_KEY` из Dashboard → Settings → API.
+Заполните в `frontend/.env` значения из Dashboard → **Settings → API**:
+
+- `VITE_SUPABASE_URL` — Project URL
+- `VITE_SUPABASE_ANON_KEY` — anon public key
+
+> Файл `.env` в Git не попадает. Не храните ключи в корне репозитория.
 
 ## 5. Запуск
 
