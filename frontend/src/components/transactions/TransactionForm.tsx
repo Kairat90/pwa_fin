@@ -177,11 +177,11 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
           <div className="animate-spin rounded-full h-8 w-8 border-4 border-primary-200 border-t-primary-600" />
         </div>
       ) : (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 min-w-0">
+          <div className="min-w-0">
             <label className="block text-sm font-medium text-gray-700 mb-1">Счет</label>
             <select
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full min-w-0 max-w-full rounded-lg border border-gray-300 px-3 sm:px-4 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               {...register('accountId')}
             >
               <option value="">Выберите счет</option>
@@ -196,10 +196,10 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             )}
           </div>
 
-          <div>
+          <div className="min-w-0">
             <label className="block text-sm font-medium text-gray-700 mb-1">Категория</label>
             <select
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full min-w-0 max-w-full rounded-lg border border-gray-300 px-3 sm:px-4 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               {...register('categoryId')}
             >
               <option value="">Выберите категорию</option>
@@ -214,20 +214,22 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0">
             <Input
               label="Сумма"
               type="number"
               step="0.01"
               placeholder="0.00"
+              inputMode="decimal"
+              className="min-w-0"
               error={errors.amount?.message}
               {...register('amount')}
             />
-            <div>
+            <div className="min-w-0">
               <label className="block text-sm font-medium text-gray-700 mb-1">Дата</label>
               <input
                 type="date"
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full min-w-0 max-w-full box-border rounded-lg border border-gray-300 px-3 sm:px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none"
                 {...register('date')}
               />
               {errors.date && (
@@ -262,15 +264,15 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             </label>
           </div>
 
-          <div className="flex gap-3 pt-4 border-t border-gray-100">
-            <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
+          <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-gray-100">
+            <Button type="button" variant="secondary" onClick={onClose} className="flex-1 w-full">
               Отмена
             </Button>
             <Button
               type="submit"
               loading={loading}
               className={cn(
-                'flex-1',
+                'flex-1 w-full',
                 type === 'income' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
               )}
             >
