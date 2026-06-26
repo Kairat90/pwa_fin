@@ -5,3 +5,4 @@ dist
 .env.production
 *.log
 *.tsbuildinfo
+README.txt

@@ -13,6 +13,7 @@ import { BalanceChart } from '../components/dashboard/BalanceChart'
 import { RecentTransactions } from '../components/dashboard/RecentTransactions'
 import { QuickAddFab } from '../components/dashboard/QuickAddFab'
 import { PeriodComparisonCard } from '../components/dashboard/PeriodComparisonCard'
+import { UpcomingScheduledBlock } from '../components/dashboard/UpcomingScheduledBlock'
 import { TransactionForm } from '../components/transactions/TransactionForm'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
@@ -174,6 +175,8 @@ const Dashboard: React.FC = () => {
           transactionCount={summary.transactionCount}
         />
       )}
+
+      <UpcomingScheduledBlock />
 
       <Card>
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Сравнение с прошлым периодом</h3>

@@ -15,6 +15,7 @@ import { mapKeys, toSnakeCase } from '../utils/supabaseMappers'
 import { normalizeCategory } from '../utils/categoryTree'
 import { buildIlikeOrFilter, buildUuidEqOrFilter } from '../utils/postgrestFilter'
 import { restoreBackupData, validateBackup } from '../utils/restoreBackup'
+import { addDays, endOfDay } from 'date-fns'
 
 const AUTH_CODE_MESSAGES: Record<string, string> = {
   signup_disabled: 'Регистрация отключена. Включите Email sign ups в Supabase → Authentication → Providers',
@@ -696,6 +697,22 @@ export const supabaseApi = {
       if (filters?.accountId) query = query.eq('account_id', filters.accountId)
 
       const { data, error } = await query
+      if (error) throw new Error(error.message)
+      return mapKeys<ScheduledTransaction[]>(data ?? [])
+    },
+
+    /** Активные операции с датой выполнения в ближайшие N дней (включая просроченные) */
+    getUpcoming: async (daysAhead = 7): Promise<ScheduledTransaction[]> => {
+      const until = endOfDay(addDays(new Date(), daysAhead)).toISOString()
+
+      const { data, error } = await supabase
+        .from('scheduled_transactions')
+        .select('*, account:accounts(*), category:categories(*)')
+        .eq('is_active', true)
+        .lte('next_execution_date', until)
+        .order('next_execution_date', { ascending: true })
+        .limit(20)
+
       if (error) throw new Error(error.message)
       return mapKeys<ScheduledTransaction[]>(data ?? [])
     },
