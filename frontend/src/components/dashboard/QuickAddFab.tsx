@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Plus, X, TrendingDown, TrendingUp } from 'lucide-react'
-import { cn } from '../utils/cn'
+import { cn } from '../../utils/cn'
 
 interface QuickAddFabProps {
   onAddExpense: () => void
