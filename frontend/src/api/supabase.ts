@@ -258,8 +258,91 @@ export const supabaseApi = {
       id: userId,
       email,
       name: metadata?.name as string | undefined,
+      defaultCurrency: (metadata?.default_currency as string) || (metadata?.defaultCurrency as string) || 'KZT',
       createdAt: new Date().toISOString()
     }),
+
+    /** Загрузка профиля из public.users */
+    fetchProfile: async (): Promise<User | null> => {
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+      if (authError) throw new Error(formatAuthError(authError))
+      if (!authUser) return null
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, email, name, default_currency, created_at')
+        .eq('id', authUser.id)
+        .maybeSingle()
+
+      if (error) throw new Error(error.message)
+
+      if (!data) {
+        return {
+          id: authUser.id,
+          email: authUser.email ?? '',
+          name: authUser.user_metadata?.name as string | undefined,
+          defaultCurrency: 'KZT',
+          createdAt: new Date().toISOString()
+        }
+      }
+
+      const row = mapKeys<{
+        id: string
+        email: string
+        name?: string
+        defaultCurrency?: string
+        createdAt: string
+      }>(data)
+
+      return {
+        id: row.id,
+        email: row.email,
+        name: row.name,
+        defaultCurrency: row.defaultCurrency || 'KZT',
+        createdAt: row.createdAt
+      }
+    },
+
+    updateProfile: async (payload: { name?: string; defaultCurrency?: string }): Promise<User> => {
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+      if (authError) throw new Error(formatAuthError(authError))
+      if (!authUser) throw new Error('Пользователь не авторизован')
+
+      const dbUpdate: Record<string, string> = {}
+      if (payload.name !== undefined) dbUpdate.name = payload.name
+      if (payload.defaultCurrency !== undefined) dbUpdate.default_currency = payload.defaultCurrency
+
+      if (Object.keys(dbUpdate).length > 0) {
+        const { error } = await supabase
+          .from('users')
+          .update(dbUpdate)
+          .eq('id', authUser.id)
+
+        if (error) throw new Error(error.message)
+      }
+
+      if (payload.name !== undefined) {
+        const { error: metaError } = await supabase.auth.updateUser({
+          data: { name: payload.name }
+        })
+        if (metaError) throw new Error(formatAuthError(metaError))
+      }
+
+      const profile = await supabaseApi.auth.fetchProfile()
+      if (!profile) throw new Error('Не удалось загрузить профиль')
+      return profile
+    },
+
+    changePassword: async (newPassword: string): Promise<void> => {
+      const { error } = await supabase.auth.updateUser({ password: newPassword })
+      if (error) throw new Error(formatAuthError(error))
+    },
+
+    deleteAccount: async (): Promise<void> => {
+      const { error } = await supabase.rpc('delete_own_account')
+      if (error) throw new Error(error.message)
+      await supabase.auth.signOut()
+    },
 
     /** Создаёт профиль и категории, если триггер БД не сработал */
     ensureProfile: async (): Promise<void> => {

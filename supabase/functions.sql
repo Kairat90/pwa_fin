@@ -1542,3 +1542,25 @@ GRANT EXECUTE ON FUNCTION public.get_top_transactions(DATE, DATE, INTEGER) TO au
 GRANT EXECUTE ON FUNCTION public.get_comparison(DATE, DATE) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_forecast(INTEGER) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.restore_user_backup(JSONB) TO authenticated;
+
+-- #####################################################################
+-- ФУНКЦИЯ: delete_own_account (миграция 20250111)
+-- #####################################################################
+CREATE OR REPLACE FUNCTION public.delete_own_account()
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    uid UUID := auth.uid();
+BEGIN
+    IF uid IS NULL THEN
+        RAISE EXCEPTION 'Пользователь не авторизован';
+    END IF;
+
+    DELETE FROM auth.users WHERE id = uid;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.delete_own_account() TO authenticated;

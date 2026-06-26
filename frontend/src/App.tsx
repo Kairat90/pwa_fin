@@ -16,6 +16,7 @@ import ScheduledPage from './pages/ScheduledPage'
 import ContactsPage from './pages/ContactsPage'
 import DebtsPage from './pages/DebtsPage'
 import ReportsPage from './pages/ReportsPage'
+import SettingsPage from './pages/SettingsPage'
 import './styles/globals.css'
 
 const queryClient = new QueryClient({
@@ -64,6 +65,7 @@ function App() {
                 <Route path="contacts" element={<ContactsPage />} />
                 <Route path="debts" element={<DebtsPage />} />
                 <Route path="reports" element={<ReportsPage />} />
+                <Route path="settings" element={<SettingsPage />} />
               </Route>
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

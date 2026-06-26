@@ -1,6 +1,7 @@
-import React, { createContext, useState, useEffect, useContext } from 'react'
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react'
 import { supabaseApi } from '../api/supabase'
 import { User } from '../types'
+import { DEFAULT_CURRENCY } from '../utils/currency'
 
 interface AuthContextType {
   user: User | null
@@ -8,14 +9,46 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>
   register: (email: string, password: string, name?: string) => Promise<{ needsEmailConfirmation: boolean }>
   logout: () => void
+  refreshProfile: () => Promise<void>
+  setUserProfile: (profile: User) => void
   isAuthenticated: boolean
+  defaultCurrency: string
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+/** Загружает профиль пользователя после авторизации */
+async function loadUserProfile(
+  authUser: { id: string; email?: string; user_metadata?: Record<string, unknown> }
+): Promise<User> {
+  try {
+    await supabaseApi.auth.ensureProfile()
+  } catch {
+    // профиль может уже существовать
+  }
+
+  const profile = await supabaseApi.auth.fetchProfile()
+  if (profile) return profile
+
+  return supabaseApi.auth.mapUser(
+    authUser.id,
+    authUser.email ?? '',
+    authUser.user_metadata
+  )
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+
+  const refreshProfile = useCallback(async () => {
+    const profile = await supabaseApi.auth.fetchProfile()
+    if (profile) setUser(profile)
+  }, [])
+
+  const setUserProfile = useCallback((profile: User) => {
+    setUser(profile)
+  }, [])
 
   useEffect(() => {
     const initAuth = async () => {
@@ -23,16 +56,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (session?.user) {
         try {
-          await supabaseApi.auth.ensureProfile()
+          const profile = await loadUserProfile(session.user)
+          setUser(profile)
         } catch {
-          // профиль может уже существовать
+          setUser(supabaseApi.auth.mapUser(
+            session.user.id,
+            session.user.email ?? '',
+            session.user.user_metadata
+          ))
         }
-
-        setUser(supabaseApi.auth.mapUser(
-          session.user.id,
-          session.user.email ?? '',
-          session.user.user_metadata
-        ))
       }
 
       setLoading(false)
@@ -42,11 +74,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const { data: { subscription } } = supabaseApi.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
-        setUser(supabaseApi.auth.mapUser(
-          session.user.id,
-          session.user.email ?? '',
-          session.user.user_metadata
-        ))
+        try {
+          const profile = await loadUserProfile(session.user)
+          setUser(profile)
+        } catch {
+          setUser(supabaseApi.auth.mapUser(
+            session.user.id,
+            session.user.email ?? '',
+            session.user.user_metadata
+          ))
+        }
       } else {
         setUser(null)
       }
@@ -61,8 +98,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error('Ошибка входа. Если вы только зарегистрировались — подтвердите email.')
     }
 
-    await supabaseApi.auth.ensureProfile()
-    setUser(supabaseApi.auth.mapUser(authUser.id, authUser.email ?? email, authUser.user_metadata))
+    const profile = await loadUserProfile(authUser)
+    setUser(profile)
   }
 
   const register = async (email: string, password: string, name?: string) => {
@@ -80,8 +117,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { needsEmailConfirmation: true }
     }
 
-    await supabaseApi.auth.ensureProfile()
-    setUser(supabaseApi.auth.mapUser(authUser.id, authUser.email ?? email, { name, ...authUser.user_metadata }))
+    const profile = await loadUserProfile(authUser)
+    setUser(profile)
     return { needsEmailConfirmation: false }
   }
 
@@ -89,6 +126,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     void supabaseApi.auth.signOut()
     setUser(null)
   }
+
+  const defaultCurrency = user?.defaultCurrency || DEFAULT_CURRENCY
 
   return (
     <AuthContext.Provider
@@ -98,7 +137,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         register,
         logout,
-        isAuthenticated: !!user
+        refreshProfile,
+        setUserProfile,
+        isAuthenticated: !!user,
+        defaultCurrency
       }}
     >
       {children}

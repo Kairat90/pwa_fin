@@ -15,6 +15,7 @@ const TransactionsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const [showForm, setShowForm] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
+  const [repeatSource, setRepeatSource] = useState<Transaction | null>(null)
   const [formType, setFormType] = useState<'income' | 'expense'>('expense')
 
   const queryClient = useQueryClient()
@@ -63,7 +64,15 @@ const TransactionsPage: React.FC = () => {
   })
 
   const handleEdit = (transaction: Transaction) => {
+    setRepeatSource(null)
     setEditingTransaction(transaction)
+    setFormType(Number(transaction.amount) > 0 ? 'income' : 'expense')
+    setShowForm(true)
+  }
+
+  const handleRepeat = (transaction: Transaction) => {
+    setEditingTransaction(null)
+    setRepeatSource(transaction)
     setFormType(Number(transaction.amount) > 0 ? 'income' : 'expense')
     setShowForm(true)
   }
@@ -72,6 +81,7 @@ const TransactionsPage: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: ['transactions'] })
     queryClient.invalidateQueries({ queryKey: ['accounts'] })
     setEditingTransaction(null)
+    setRepeatSource(null)
   }
 
   const handleFilter = (newFilters: TransactionFilterValues) => {
@@ -102,6 +112,7 @@ const TransactionsPage: React.FC = () => {
           <Button
             onClick={() => {
               setEditingTransaction(null)
+              setRepeatSource(null)
               setFormType('expense')
               setShowForm(true)
             }}
@@ -113,6 +124,7 @@ const TransactionsPage: React.FC = () => {
           <Button
             onClick={() => {
               setEditingTransaction(null)
+              setRepeatSource(null)
               setFormType('income')
               setShowForm(true)
             }}
@@ -138,6 +150,7 @@ const TransactionsPage: React.FC = () => {
         transactions={transactionsData?.data || []}
         onEdit={handleEdit}
         onDelete={deleteMutation.mutate}
+        onRepeat={handleRepeat}
         loading={isLoading}
       />
 
@@ -146,10 +159,12 @@ const TransactionsPage: React.FC = () => {
         onClose={() => {
           setShowForm(false)
           setEditingTransaction(null)
+          setRepeatSource(null)
         }}
         onSuccess={handleFormSuccess}
         type={formType}
         transaction={editingTransaction || undefined}
+        repeatSource={repeatSource || undefined}
       />
     </div>
   )

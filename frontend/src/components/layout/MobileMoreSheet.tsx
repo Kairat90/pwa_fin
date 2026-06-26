@@ -5,7 +5,8 @@ import {
   Repeat,
   Clock,
   Contact,
-  X
+  X,
+  Settings
 } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import { ICON_16 } from '../../utils/iconSize'
@@ -20,7 +21,8 @@ const moreLinks = [
   { to: '/categories', icon: FolderOpen, label: 'Категории' },
   { to: '/transfers', icon: Repeat, label: 'Переводы' },
   { to: '/scheduled', icon: Clock, label: 'Планировщик' },
-  { to: '/contacts', icon: Contact, label: 'Контакты' }
+  { to: '/contacts', icon: Contact, label: 'Контакты' },
+  { to: '/settings', icon: Settings, label: 'Настройки' }
 ]
 
 export function MobileMoreSheet({ isOpen, onClose }: MobileMoreSheetProps) {

@@ -31,6 +31,8 @@ interface TransactionFormProps {
   onSuccess: () => void
   type: 'income' | 'expense'
   transaction?: Transaction
+  /** Повтор операции: те же поля, новая дата, создаёт новую запись */
+  repeatSource?: Transaction
   defaultAccountId?: string
 }
 
@@ -40,6 +42,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   onSuccess,
   type,
   transaction,
+  repeatSource,
   defaultAccountId
 }) => {
   const [loading, setLoading] = useState(false)
@@ -74,6 +77,16 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         tags: transaction.tags.join(', '),
         isExcludedFromBudget: transaction.isExcludedFromBudget || false
       })
+    } else if (repeatSource) {
+      reset({
+        accountId: repeatSource.accountId,
+        categoryId: repeatSource.categoryId || '',
+        amount: Math.abs(Number(repeatSource.amount)),
+        date: toDateInputValue(),
+        note: repeatSource.note || '',
+        tags: repeatSource.tags.filter((t) => t !== 'transfer').join(', '),
+        isExcludedFromBudget: repeatSource.isExcludedFromBudget || false
+      })
     } else {
       reset({
         accountId: defaultAccountId || '',
@@ -85,7 +98,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         isExcludedFromBudget: false
       })
     }
-  }, [isOpen, transaction, defaultAccountId, reset])
+  }, [isOpen, transaction, repeatSource, defaultAccountId, reset])
 
   useEffect(() => {
     const loadData = async () => {
@@ -148,7 +161,15 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={transaction ? 'Редактировать' : type === 'income' ? 'Новый доход' : 'Новый расход'}
+      title={
+        transaction
+          ? 'Редактировать'
+          : repeatSource
+            ? 'Повторить операцию'
+            : type === 'income'
+              ? 'Новый доход'
+              : 'Новый расход'
+      }
       size="lg"
     >
       {loadingData ? (
@@ -253,7 +274,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                 type === 'income' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
               )}
             >
-              {transaction ? 'Сохранить' : type === 'income' ? 'Добавить доход' : 'Добавить расход'}
+              {transaction ? 'Сохранить' : repeatSource ? 'Повторить' : type === 'income' ? 'Добавить доход' : 'Добавить расход'}
             </Button>
           </div>
         </form>

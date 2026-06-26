@@ -9,7 +9,8 @@ import {
   Contact,
   HandCoins,
   PieChart,
-  LogOut
+  LogOut,
+  Settings
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { cn } from '../../utils/cn'
@@ -27,7 +28,8 @@ export function Sidebar() {
     { to: '/scheduled', icon: Clock, label: 'Планировщик' },
     { to: '/contacts', icon: Contact, label: 'Контакты' },
     { to: '/debts', icon: HandCoins, label: 'Долги' },
-    { to: '/reports', icon: PieChart, label: 'Отчеты' }
+    { to: '/reports', icon: PieChart, label: 'Отчеты' },
+    { to: '/settings', icon: Settings, label: 'Настройки' }
   ]
 
   return (

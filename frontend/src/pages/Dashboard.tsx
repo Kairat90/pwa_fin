@@ -6,24 +6,32 @@ import toast from 'react-hot-toast'
 import { RefreshCw } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { supabaseApi } from '../api/supabase'
+import { Transaction } from '../types'
+import { useAuth } from '../context/AuthContext'
 import { SummaryCards } from '../components/dashboard/SummaryCards'
 import { ExpensePieChart } from '../components/dashboard/ExpensePieChart'
 import { BalanceChart } from '../components/dashboard/BalanceChart'
 import { RecentTransactions } from '../components/dashboard/RecentTransactions'
+import { QuickAddFab } from '../components/dashboard/QuickAddFab'
+import { PeriodComparisonCard } from '../components/dashboard/PeriodComparisonCard'
+import { TransactionForm } from '../components/transactions/TransactionForm'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { cn } from '../utils/cn'
-import { formatCurrency, DEFAULT_CURRENCY } from '../utils/currency'
+import { formatCurrency } from '../utils/currency'
 
 type Period = 'month' | 'week' | 'today'
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { defaultCurrency } = useAuth()
   const [period, setPeriod] = useState<Period>('month')
   const [startDate, setStartDate] = useState(startOfMonth(new Date()))
   const [endDate, setEndDate] = useState(endOfMonth(new Date()))
+  const [showForm, setShowForm] = useState(false)
+  const [formType, setFormType] = useState<'income' | 'expense'>('expense')
 
   const startStr = format(startDate, 'yyyy-MM-dd')
   const endStr = format(endDate, 'yyyy-MM-dd')
@@ -31,6 +39,11 @@ const Dashboard: React.FC = () => {
   const { data: summary, isLoading: summaryLoading } = useQuery({
     queryKey: ['summary', startStr, endStr],
     queryFn: () => supabaseApi.reports.getSummary(startStr, endStr)
+  })
+
+  const { data: comparison, isLoading: comparisonLoading } = useQuery({
+    queryKey: ['comparison', startStr, endStr],
+    queryFn: () => supabaseApi.reports.getComparison(startStr, endStr)
   })
 
   const { data: expenseCategories } = useQuery({
@@ -74,6 +87,18 @@ const Dashboard: React.FC = () => {
     toast.success('Данные обновлены')
   }
 
+  const openForm = (type: 'income' | 'expense') => {
+    setFormType(type)
+    setShowForm(true)
+  }
+
+  const handleFormSuccess = () => {
+    queryClient.invalidateQueries()
+  }
+
+  const comparisonLabel =
+    period === 'month' ? 'к прошлому месяцу' : period === 'week' ? 'к прошлой неделе' : 'к вчера'
+
   if (summaryLoading) {
     return <LoadingSpinner size="lg" />
   }
@@ -92,6 +117,7 @@ const Dashboard: React.FC = () => {
             {(['today', 'week', 'month'] as const).map((p) => (
               <button
                 key={p}
+                type="button"
                 onClick={() => handlePeriodChange(p)}
                 className={cn(
                   'px-3 py-1.5 text-sm rounded-lg transition-colors',
@@ -119,7 +145,7 @@ const Dashboard: React.FC = () => {
       <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-2xl p-6 text-white">
         <p className="text-sm opacity-90">Общий баланс</p>
         <p className="text-3xl font-bold mt-1">
-          {formatCurrency(totalBalance || 0, DEFAULT_CURRENCY)}
+          {formatCurrency(totalBalance || 0, defaultCurrency)}
         </p>
         <div className="flex gap-4 mt-4 flex-wrap">
           <Button
@@ -150,6 +176,18 @@ const Dashboard: React.FC = () => {
         />
       )}
 
+      <Card>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Сравнение с прошлым периодом</h3>
+        {comparisonLoading && <LoadingSpinner />}
+        {comparison && !comparisonLoading && (
+          <PeriodComparisonCard
+            data={comparison}
+            currency={defaultCurrency}
+            periodLabel={comparisonLabel}
+          />
+        )}
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Динамика баланса</h3>
@@ -177,16 +215,16 @@ const Dashboard: React.FC = () => {
         )}
       </Card>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="hidden md:grid grid-cols-2 md:grid-cols-4 gap-4">
         <Button
-          onClick={() => navigate('/transactions')}
+          onClick={() => openForm('expense')}
           className="h-20 flex flex-col items-center justify-center gap-1 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200"
         >
           <span className="text-2xl">💳</span>
           <span className="text-sm">Добавить расход</span>
         </Button>
         <Button
-          onClick={() => navigate('/transactions')}
+          onClick={() => openForm('income')}
           className="h-20 flex flex-col items-center justify-center gap-1 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200"
         >
           <span className="text-2xl">💰</span>
@@ -207,6 +245,15 @@ const Dashboard: React.FC = () => {
           <span className="text-sm">Долги</span>
         </Button>
       </div>
+
+      <QuickAddFab onAddExpense={() => openForm('expense')} onAddIncome={() => openForm('income')} />
+
+      <TransactionForm
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
+        onSuccess={handleFormSuccess}
+        type={formType}
+      />
     </div>
   )
 }

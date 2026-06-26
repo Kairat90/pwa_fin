@@ -1,7 +1,7 @@
 import React from 'react'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import { Edit2, Trash2, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { Edit2, Trash2, ArrowUpRight, ArrowDownRight, RotateCcw } from 'lucide-react'
 import { Transaction } from '../../types'
 import { formatCurrency } from '../../utils/currency'
 import { cn } from '../../utils/cn'
@@ -11,6 +11,7 @@ interface TransactionListProps {
   transactions: Transaction[]
   onEdit: (transaction: Transaction) => void
   onDelete: (id: string) => void
+  onRepeat?: (transaction: Transaction) => void
   loading?: boolean
 }
 
@@ -18,6 +19,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   transactions,
   onEdit,
   onDelete,
+  onRepeat,
   loading
 }) => {
   if (loading) {
@@ -118,6 +120,16 @@ export const TransactionList: React.FC<TransactionListProps> = ({
               </div>
               {!isTransfer && (
                 <div className="flex items-center gap-1">
+                  {onRepeat && (
+                    <button
+                      type="button"
+                      onClick={() => onRepeat(transaction)}
+                      className="p-1.5 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                      title="Повторить операцию"
+                    >
+                      <RotateCcw className={ICON_16} />
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => onEdit(transaction)}
