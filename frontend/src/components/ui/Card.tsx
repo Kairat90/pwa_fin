@@ -11,9 +11,9 @@ interface CardProps {
 export const Card: React.FC<CardProps> = ({ children, className, title, action }) => {
   if (title || action) {
     return (
-      <div className={cn('bg-white rounded-xl shadow-sm border border-gray-100', className)}>
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-          {title && <h3 className="font-semibold text-gray-900">{title}</h3>}
+      <div className={cn('bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800', className)}>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+          {title && <h3 className="font-semibold text-gray-900 dark:text-gray-100">{title}</h3>}
           {action}
         </div>
         <div className="p-4">{children}</div>
@@ -22,7 +22,7 @@ export const Card: React.FC<CardProps> = ({ children, className, title, action }
   }
 
   return (
-    <div className={cn('bg-white rounded-2xl shadow-lg p-6', className)}>
+    <div className={cn('bg-white dark:bg-gray-900 rounded-2xl shadow-lg p-6', className)}>
       {children}
     </div>
   )

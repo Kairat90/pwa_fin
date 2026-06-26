@@ -36,9 +36,9 @@ export function MobileMoreSheet({ isOpen, onClose }: MobileMoreSheetProps) {
         aria-label="Закрыть меню"
         onClick={onClose}
       />
-      <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-xl pb-safe">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">Ещё</h2>
+      <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-900 rounded-t-2xl shadow-xl pb-safe">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Ещё</h2>
           <button
             type="button"
             onClick={onClose}
@@ -57,8 +57,8 @@ export function MobileMoreSheet({ isOpen, onClose }: MobileMoreSheetProps) {
                 cn(
                   'flex items-center gap-3 px-4 py-3 rounded-xl text-base transition-colors',
                   isActive
-                    ? 'bg-primary-50 text-primary-700 font-medium'
-                    : 'text-gray-700 hover:bg-gray-50'
+                    ? 'bg-primary-50 text-primary-700 font-medium dark:bg-primary-900/50 dark:text-primary-300'
+                    : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800'
                 )
               }
             >

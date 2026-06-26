@@ -181,7 +181,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
           <div className="min-w-0">
             <label className="block text-sm font-medium text-gray-700 mb-1">Счет</label>
             <select
-              className="w-full min-w-0 max-w-full rounded-lg border border-gray-300 px-3 sm:px-4 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full min-w-0 max-w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 sm:px-4 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               {...register('accountId')}
             >
               <option value="">Выберите счет</option>
@@ -199,7 +199,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
           <div className="min-w-0">
             <label className="block text-sm font-medium text-gray-700 mb-1">Категория</label>
             <select
-              className="w-full min-w-0 max-w-full rounded-lg border border-gray-300 px-3 sm:px-4 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full min-w-0 max-w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 sm:px-4 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               {...register('categoryId')}
             >
               <option value="">Выберите категорию</option>
@@ -229,7 +229,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-1">Дата</label>
               <input
                 type="date"
-                className="w-full min-w-0 max-w-full box-border rounded-lg border border-gray-300 px-3 sm:px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none"
+                className="w-full min-w-0 max-w-full box-border rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 sm:px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none"
                 {...register('date')}
               />
               {errors.date && (

@@ -54,7 +54,7 @@ export const PeriodComparisonCard: React.FC<PeriodComparisonCardProps> = ({
           const isGood = positiveIsGood ? change >= 0 : change <= 0
 
           return (
-            <div key={label} className="p-3 bg-gray-50 rounded-xl">
+            <div key={label} className="p-3 bg-gray-50 dark:bg-gray-800/80 rounded-xl">
               <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
                 <Icon className={ICON_16} />
                 {label}

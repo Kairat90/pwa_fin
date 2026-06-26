@@ -4,10 +4,13 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
-import { User, Lock, Trash2, AlertTriangle } from 'lucide-react'
+import { User, Lock, Trash2, AlertTriangle, Moon } from 'lucide-react'
 import { supabaseApi, getErrorMessage } from '../api/supabase'
 import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext'
 import { CURRENCIES } from '../utils/currency'
+import { THEME_OPTIONS } from '../utils/theme'
+import { cn } from '../utils/cn'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Card } from '../components/ui/Card'
@@ -33,6 +36,7 @@ type PasswordFormData = z.infer<typeof passwordSchema>
 const SettingsPage: React.FC = () => {
   const navigate = useNavigate()
   const { user, setUserProfile, logout } = useAuth()
+  const { theme, setTheme } = useTheme()
   const [profileLoading, setProfileLoading] = useState(false)
   const [passwordLoading, setPasswordLoading] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
@@ -140,8 +144,42 @@ const SettingsPage: React.FC = () => {
 
       <Card>
         <div className="flex items-center gap-2 mb-4">
+          <Moon className={ICON_16} />
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Тема оформления</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {THEME_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => {
+                setTheme(option.value)
+                toast.success(
+                  option.value === 'system'
+                    ? 'Тема: как в системе'
+                    : option.value === 'dark'
+                      ? 'Тёмная тема включена'
+                      : 'Светлая тема включена'
+                )
+              }}
+              className={cn(
+                'p-4 rounded-xl border-2 text-left transition-colors',
+                theme === option.value
+                  ? 'border-primary-600 bg-primary-50 dark:bg-primary-900/40'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-700'
+              )}
+            >
+              <p className="font-medium text-gray-900 dark:text-gray-100">{option.label}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{option.description}</p>
+            </button>
+          ))}
+        </div>
+      </Card>
+
+      <Card>
+        <div className="flex items-center gap-2 mb-4">
           <Lock className={ICON_16} />
-          <h2 className="text-lg font-semibold text-gray-900">Смена пароля</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Смена пароля</h2>
         </div>
         <form onSubmit={passwordForm.handleSubmit(onChangePassword)} className="space-y-4">
           <Input

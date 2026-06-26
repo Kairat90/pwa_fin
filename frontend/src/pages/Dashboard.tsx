@@ -112,7 +112,7 @@ const Dashboard: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex bg-gray-100 rounded-lg p-1">
+          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
             {(['today', 'week', 'month'] as const).map((p) => (
               <button
                 key={p}
@@ -121,8 +121,8 @@ const Dashboard: React.FC = () => {
                 className={cn(
                   'px-3 py-1.5 text-sm rounded-lg transition-colors',
                   period === p
-                    ? 'bg-white shadow-sm text-gray-900'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
                 )}
               >
                 {p === 'today' ? 'Сегодня' : p === 'week' ? 'Неделя' : 'Месяц'}
