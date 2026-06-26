@@ -1,5 +1,5 @@
 import React from 'react'
-import { Edit2, Trash2, Star, Phone, Mail, User } from 'lucide-react'
+import { Edit2, Trash2, Star, Phone, Mail, User, ChevronRight } from 'lucide-react'
 import { Contact, Debt } from '../../types'
 import { formatCurrency } from '../../utils/currency'
 import { cn } from '../../utils/cn'
@@ -10,6 +10,7 @@ interface ContactCardProps {
   onEdit: (contact: Contact) => void
   onDelete: (id: string) => void
   onToggleFavorite: (id: string, isFavorite: boolean) => void
+  onViewHistory: (contact: Contact) => void
 }
 
 function debtRemaining(debt: Debt): number {
@@ -20,20 +21,24 @@ export const ContactCard: React.FC<ContactCardProps> = ({
   contact,
   onEdit,
   onDelete,
-  onToggleFavorite
+  onToggleFavorite,
+  onViewHistory
 }) => {
   const activeDebts = contact.debts?.filter(
     (d) => d.status === 'active' || d.status === 'overdue'
   ) || []
   const totalDebt = activeDebts.reduce((sum, d) => sum + debtRemaining(d), 0)
   const hasActiveDebts = activeDebts.length > 0
-  const settledCount = contact.debts?.filter((d) => d.status === 'settled').length || 0
 
   return (
-    <div className="bg-white rounded-xl border p-4 shadow-sm hover:shadow-md transition-shadow">
+    <div className="bg-white dark:bg-gray-900 rounded-xl border dark:border-gray-800 p-4 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className={cn(EMOJI_BOX_16, 'rounded-full bg-primary-100 text-primary-600 overflow-hidden')}>
+        <button
+          type="button"
+          onClick={() => onViewHistory(contact)}
+          className="flex items-center gap-3 min-w-0 flex-1 text-left rounded-lg -m-1 p-1 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+        >
+          <div className={cn(EMOJI_BOX_16, 'rounded-full bg-primary-100 text-primary-600 overflow-hidden shrink-0')}>
             {contact.avatarData ? (
               <img src={contact.avatarData} alt={contact.name} className="w-full h-full object-cover" />
             ) : (
@@ -42,7 +47,7 @@ export const ContactCard: React.FC<ContactCardProps> = ({
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-semibold text-gray-900">{contact.name}</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">{contact.name}</h3>
               {contact.isFavorite && (
                 <Star className={cn(ICON_16, 'text-yellow-400 fill-yellow-400')} />
               )}
@@ -72,7 +77,8 @@ export const ContactCard: React.FC<ContactCardProps> = ({
               <p className="text-sm text-gray-400 mt-1 truncate">{contact.note}</p>
             )}
           </div>
-        </div>
+          <ChevronRight className={cn(ICON_16, 'text-gray-300 shrink-0 self-center')} />
+        </button>
         <div className="flex items-center gap-1 flex-shrink-0">
           <button
             type="button"
@@ -105,12 +111,16 @@ export const ContactCard: React.FC<ContactCardProps> = ({
       </div>
 
       {contact.debts && contact.debts.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-gray-100">
+        <button
+          type="button"
+          onClick={() => onViewHistory(contact)}
+          className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 w-full text-left hover:opacity-80 transition-opacity"
+        >
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-500">Активных долгов: {activeDebts.length}</span>
-            <span className="text-gray-500">Погашено: {settledCount}</span>
+            <span className="text-primary-600 dark:text-primary-400 text-xs">История →</span>
           </div>
-        </div>
+        </button>
       )}
     </div>
   )

@@ -16,6 +16,7 @@ import { normalizeCategory } from '../utils/categoryTree'
 import { buildIlikeOrFilter, buildUuidEqOrFilter } from '../utils/postgrestFilter'
 import { restoreBackupData, validateBackup } from '../utils/restoreBackup'
 import { addDays, endOfDay } from 'date-fns'
+import { buildContactHistory, ContactHistoryData, ContactCurrencySummary, ContactPaymentEntry } from '../utils/contactHistory'
 
 const AUTH_CODE_MESSAGES: Record<string, string> = {
   signup_disabled: 'Регистрация отключена. Включите Email sign ups в Supabase → Authentication → Providers',
@@ -196,6 +197,13 @@ export type DebtStats = {
   overdueCount: number
   activeCount: number
   totalDebts: number
+}
+
+export type ContactHistory = {
+  contact: Contact
+  debts: Debt[]
+  summaries: ContactCurrencySummary[]
+  payments: ContactPaymentEntry[]
 }
 
 // =====================================================
@@ -807,7 +815,33 @@ export const supabaseApi = {
         .eq('id', id)
         .single()
       if (error) throw new Error(error.message)
-      return mapKeys<Contact>(data)
+      const contact = mapKeys<Contact>(data)
+      const rawDebts = (data as { debts?: Record<string, unknown>[] }).debts ?? []
+      const debts = await enrichDebts(mapKeys<Record<string, unknown>[]>(rawDebts))
+      return { ...contact, debts }
+    },
+
+    /** История контакта: долги, платежи, итоги по валютам */
+    getHistory: async (id: string): Promise<ContactHistory> => {
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('*, debts:debts(*, payments:debt_payments(*))')
+        .eq('id', id)
+        .single()
+
+      if (error) throw new Error(error.message)
+
+      const contact = mapKeys<Contact>(data)
+      const rawDebts = (data as { debts?: Record<string, unknown>[] }).debts ?? []
+      const debts = await enrichDebts(mapKeys<Record<string, unknown>[]>(rawDebts))
+      const history: ContactHistoryData = buildContactHistory(debts)
+
+      return {
+        contact: { ...contact, debts: history.debts },
+        debts: history.debts,
+        summaries: history.summaries,
+        payments: history.payments
+      }
     },
 
     create: async (payload: Partial<Contact>): Promise<Contact> => {

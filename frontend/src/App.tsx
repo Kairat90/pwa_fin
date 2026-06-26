@@ -17,6 +17,7 @@ import TransactionsPage from './pages/TransactionsPage'
 import TransfersPage from './pages/TransfersPage'
 import ScheduledPage from './pages/ScheduledPage'
 import ContactsPage from './pages/ContactsPage'
+import ContactDetailPage from './pages/ContactDetailPage'
 import DebtsPage from './pages/DebtsPage'
 import ReportsPage from './pages/ReportsPage'
 import SettingsPage from './pages/SettingsPage'
@@ -77,6 +78,7 @@ function App() {
                 <Route path="transfers" element={<TransfersPage />} />
                 <Route path="scheduled" element={<ScheduledPage />} />
                 <Route path="contacts" element={<ContactsPage />} />
+                <Route path="contacts/:contactId" element={<ContactDetailPage />} />
                 <Route path="debts" element={<DebtsPage />} />
                 <Route path="reports" element={<ReportsPage />} />
                 <Route path="settings" element={<SettingsPage />} />

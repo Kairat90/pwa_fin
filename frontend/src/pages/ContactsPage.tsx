@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { Plus, Star } from 'lucide-react'
@@ -12,6 +13,7 @@ import { SearchField } from '../components/common/SearchField'
 import { cn } from '../utils/cn'
 
 const ContactsPage: React.FC = () => {
+  const navigate = useNavigate()
   const [showForm, setShowForm] = useState(false)
   const [editingContact, setEditingContact] = useState<Contact | null>(null)
   const [searchInput, setSearchInput] = useState('')
@@ -124,6 +126,7 @@ const ContactsPage: React.FC = () => {
               onToggleFavorite={(id, isFavorite) =>
                 toggleFavoriteMutation.mutate({ id, isFavorite })
               }
+              onViewHistory={(contact) => navigate(`/contacts/${contact.id}`)}
             />
           ))}
         </div>
