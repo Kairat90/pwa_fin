@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import {
   PieChart,
   Pie,
@@ -14,7 +14,7 @@ import {
 } from 'recharts'
 import { CategoryBreakdown } from '../../api/supabase'
 import { cn } from '../../utils/cn'
-import { CHART_OTHER_COLOR, resolveCategoryChartColor } from '../../utils/chartColors'
+import { CHART_OTHER_COLOR, buildChartPalette } from '../../utils/chartColors'
 
 interface CategoryChartProps {
   data: CategoryBreakdown[]
@@ -28,32 +28,43 @@ export const CategoryChart: React.FC<CategoryChartProps> = ({
 }) => {
   const [chartType, setChartType] = useState<'pie' | 'bar'>(defaultChartType)
 
+  const chartData = useMemo(() => {
+    const topItems = data.slice(0, 8)
+    const hasOther = data.length > 8
+    const palette = buildChartPalette(
+      topItems.length + (hasOther ? 1 : 0),
+      topItems.map((item) => item.id).join('|')
+    )
+
+    const items = topItems.map((item, index) => ({
+      name: `${item.icon} ${item.name}`,
+      value: item.amount,
+      percentage: item.percentage,
+      color: palette[index],
+      count: item.count
+    }))
+
+    if (hasOther) {
+      const otherTotal = data.slice(8).reduce((sum, item) => sum + item.amount, 0)
+      const otherPercentage = data.slice(8).reduce((sum, item) => sum + item.percentage, 0)
+      items.push({
+        name: '📦 Прочее',
+        value: otherTotal,
+        percentage: otherPercentage,
+        color: CHART_OTHER_COLOR,
+        count: data.slice(8).reduce((sum, item) => sum + item.count, 0)
+      })
+    }
+
+    return items
+  }, [data])
+
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 text-gray-400">
         Нет данных за этот период
       </div>
     )
-  }
-
-  const chartData = data.slice(0, 8).map((item, index) => ({
-    name: `${item.icon} ${item.name}`,
-    value: item.amount,
-    percentage: item.percentage,
-    color: resolveCategoryChartColor(item.color, index),
-    count: item.count
-  }))
-
-  if (data.length > 8) {
-    const otherTotal = data.slice(8).reduce((sum, item) => sum + item.amount, 0)
-    const otherPercentage = data.slice(8).reduce((sum, item) => sum + item.percentage, 0)
-    chartData.push({
-      name: '📦 Прочее',
-      value: otherTotal,
-      percentage: otherPercentage,
-      color: CHART_OTHER_COLOR,
-      count: data.slice(8).reduce((sum, item) => sum + item.count, 0)
-    })
   }
 
   const total = data.reduce((sum, item) => sum + item.amount, 0)

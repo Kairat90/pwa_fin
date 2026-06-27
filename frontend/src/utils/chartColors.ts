@@ -1,55 +1,86 @@
 /**
- * Палитра для диаграмм — достаточно оттенков, чтобы секции не повторялись.
- * При большем числе категорий цвета циклически повторяются с последнего.
+ * Контрастная палитра для диаграмм.
+ * Цвета категорий из БД не используются — только эта палитра (перемешивается по seed).
  */
 export const CHART_COLORS = [
-  '#4F46E5', // indigo
-  '#10B981', // emerald
-  '#F59E0B', // amber
-  '#EF4444', // red
-  '#8B5CF6', // violet
-  '#EC4899', // pink
-  '#14B8A6', // teal
-  '#F97316', // orange
-  '#3B82F6', // blue
-  '#84CC16', // lime
-  '#06B6D4', // cyan
-  '#A855F7', // purple
-  '#E11D48', // rose
-  '#0EA5E9', // sky
-  '#22C55E', // green
-  '#D946EF', // fuchsia
-  '#64748B', // slate
-  '#CA8A04', // yellow-dark
-  '#7C3AED', // violet-dark
-  '#059669', // emerald-dark
-  '#DC2626', // red-dark
-  '#2563EB', // blue-dark
-  '#DB2777', // pink-dark
-  '#0891B2', // cyan-dark
-  '#65A30D', // lime-dark
-  '#C026D3', // fuchsia-dark
-  '#EA580C', // orange-dark
-  '#4D7C0F', // olive
-  '#9333EA', // purple-mid
-  '#0369A1', // sky-dark
-  '#BE123C', // rose-dark
-  '#15803D'  // green-dark
+  '#4F46E5',
+  '#10B981',
+  '#F59E0B',
+  '#EF4444',
+  '#8B5CF6',
+  '#EC4899',
+  '#14B8A6',
+  '#F97316',
+  '#3B82F6',
+  '#84CC16',
+  '#06B6D4',
+  '#A855F7',
+  '#E11D48',
+  '#0EA5E9',
+  '#22C55E',
+  '#D946EF',
+  '#CA8A04',
+  '#7C3AED',
+  '#059669',
+  '#DC2626',
+  '#2563EB',
+  '#DB2777',
+  '#0891B2',
+  '#65A30D',
+  '#C026D3',
+  '#EA580C',
+  '#4D7C0F',
+  '#9333EA',
+  '#0369A1',
+  '#BE123C',
+  '#15803D',
+  '#64748B'
 ] as const
 
-/** Цвет «Прочее» на диаграммах */
+/** Цвет секции «Прочее» */
 export const CHART_OTHER_COLOR = '#9CA3AF'
 
-/** Цвет секции по индексу (если у категории нет своего цвета) */
-export function getChartColor(index: number): string {
-  return CHART_COLORS[index % CHART_COLORS.length]
-}
+function hashSeed(input: string): number {
+  let hash = 2166136261
 
-/** Цвет категории: свой из БД или из палитры по позиции */
-export function resolveCategoryChartColor(categoryColor: string | undefined, index: number): string {
-  if (categoryColor && categoryColor.trim()) {
-    return categoryColor
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i)
+    hash = Math.imul(hash, 16777619)
   }
 
-  return getChartColor(index)
+  return hash >>> 0
+}
+
+/** Детерминированное перемешивание — «случайный» порядок, стабильный при перерисовке */
+function seededShuffle<T>(items: T[], seed: string): T[] {
+  const result = [...items]
+  let state = hashSeed(seed)
+
+  for (let i = result.length - 1; i > 0; i--) {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0
+    const j = state % (i + 1)
+    ;[result[i], result[j]] = [result[j], result[i]]
+  }
+
+  return result
+}
+
+/**
+ * Набор контрастных цветов для секций диаграммы.
+ * @param count — число секций (без «Прочее»)
+ * @param seed — ключ стабильности (например id категорий через «|»)
+ */
+export function buildChartPalette(count: number, seed: string): string[] {
+  if (count <= 0) {
+    return []
+  }
+
+  const shuffled = seededShuffle([...CHART_COLORS], seed || 'chart')
+  const palette: string[] = []
+
+  for (let i = 0; i < count; i++) {
+    palette.push(shuffled[i % shuffled.length])
+  }
+
+  return palette
 }
