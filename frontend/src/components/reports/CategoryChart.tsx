@@ -15,6 +15,7 @@ import {
 import { CategoryBreakdown } from '../../api/supabase'
 import { cn } from '../../utils/cn'
 import { CHART_OTHER_COLOR, buildChartPalette, PIE_CHART_LAYOUT } from '../../utils/chartColors'
+import { formatPieLegendLabel, renderPiePercentLabel } from '../../utils/pieChartLabels'
 
 interface CategoryChartProps {
   data: CategoryBreakdown[]
@@ -110,6 +111,8 @@ export const CategoryChart: React.FC<CategoryChartProps> = ({
                 outerRadius={68}
                 paddingAngle={PIE_CHART_LAYOUT.pie.paddingAngle}
                 dataKey="value"
+                label={renderPiePercentLabel}
+                labelLine={false}
               >
                 {chartData.map((entry, index) => (
                   <Cell key={index} fill={entry.color} />
@@ -121,7 +124,13 @@ export const CategoryChart: React.FC<CategoryChartProps> = ({
                   'Сумма'
                 ]}
               />
-              <Legend {...PIE_CHART_LAYOUT.legend} />
+              <Legend
+                {...PIE_CHART_LAYOUT.legend}
+                formatter={(value: string) => {
+                  const item = chartData.find((entry) => entry.name === value)
+                  return formatPieLegendLabel(value, item?.percentage)
+                }}
+              />
             </PieChart>
           ) : (
             <BarChart data={chartData} layout="vertical">

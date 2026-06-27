@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
 import { CategoryBreakdown } from '../../api/supabase'
 import { CHART_OTHER_COLOR, buildChartPalette, PIE_CHART_LAYOUT_COMPACT } from '../../utils/chartColors'
+import { formatPieLegendLabel, renderPiePercentLabel } from '../../utils/pieChartLabels'
 
 interface ExpensePieChartProps {
   data: CategoryBreakdown[]
@@ -64,6 +65,8 @@ export const ExpensePieChart: React.FC<ExpensePieChartProps> = ({ data }) => {
             outerRadius={72}
             paddingAngle={PIE_CHART_LAYOUT_COMPACT.pie.paddingAngle}
             dataKey="value"
+            label={renderPiePercentLabel}
+            labelLine={false}
           >
             {chartData.map((entry, index) => (
               <Cell key={index} fill={entry.color} />
@@ -75,7 +78,13 @@ export const ExpensePieChart: React.FC<ExpensePieChartProps> = ({ data }) => {
               'Сумма'
             ]}
           />
-          <Legend {...PIE_CHART_LAYOUT_COMPACT.legend} />
+          <Legend
+            {...PIE_CHART_LAYOUT_COMPACT.legend}
+            formatter={(value: string) => {
+              const item = chartData.find((entry) => entry.name === value)
+              return formatPieLegendLabel(value, item?.percentage)
+            }}
+          />
         </PieChart>
       </ResponsiveContainer>
     </div>
