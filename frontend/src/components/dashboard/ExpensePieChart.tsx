@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
 import { CategoryBreakdown } from '../../api/supabase'
-import { CHART_OTHER_COLOR, buildChartPalette } from '../../utils/chartColors'
+import { CHART_OTHER_COLOR, buildChartPalette, PIE_CHART_LAYOUT_COMPACT } from '../../utils/chartColors'
 
 interface ExpensePieChartProps {
   data: CategoryBreakdown[]
@@ -53,16 +53,16 @@ export const ExpensePieChart: React.FC<ExpensePieChartProps> = ({ data }) => {
   const total = data.reduce((sum, item) => sum + item.amount, 0)
 
   return (
-    <div className="h-64 w-full">
+    <div className="h-72 sm:h-80 w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
+        <PieChart margin={PIE_CHART_LAYOUT_COMPACT.margin}>
           <Pie
             data={chartData}
-            cx="50%"
-            cy="50%"
-            innerRadius={60}
-            outerRadius={80}
-            paddingAngle={2}
+            cx={PIE_CHART_LAYOUT_COMPACT.pie.cx}
+            cy={PIE_CHART_LAYOUT_COMPACT.pie.cy}
+            innerRadius={52}
+            outerRadius={72}
+            paddingAngle={PIE_CHART_LAYOUT_COMPACT.pie.paddingAngle}
             dataKey="value"
           >
             {chartData.map((entry, index) => (
@@ -75,7 +75,7 @@ export const ExpensePieChart: React.FC<ExpensePieChartProps> = ({ data }) => {
               'Сумма'
             ]}
           />
-          <Legend />
+          <Legend {...PIE_CHART_LAYOUT_COMPACT.legend} />
         </PieChart>
       </ResponsiveContainer>
     </div>

@@ -14,7 +14,7 @@ import {
 } from 'recharts'
 import { CategoryBreakdown } from '../../api/supabase'
 import { cn } from '../../utils/cn'
-import { CHART_OTHER_COLOR, buildChartPalette } from '../../utils/chartColors'
+import { CHART_OTHER_COLOR, buildChartPalette, PIE_CHART_LAYOUT } from '../../utils/chartColors'
 
 interface CategoryChartProps {
   data: CategoryBreakdown[]
@@ -98,20 +98,18 @@ export const CategoryChart: React.FC<CategoryChartProps> = ({
         </button>
       </div>
 
-      <div className="h-64 w-full">
+      <div className={cn('w-full', chartType === 'pie' ? 'h-80 sm:h-96' : 'h-64')}>
         <ResponsiveContainer width="100%" height="100%">
           {chartType === 'pie' ? (
-            <PieChart>
+            <PieChart margin={PIE_CHART_LAYOUT.margin}>
               <Pie
                 data={chartData}
-                cx="50%"
-                cy="50%"
-                innerRadius={50}
-                outerRadius={80}
-                paddingAngle={2}
+                cx={PIE_CHART_LAYOUT.pie.cx}
+                cy={PIE_CHART_LAYOUT.pie.cy}
+                innerRadius={48}
+                outerRadius={68}
+                paddingAngle={PIE_CHART_LAYOUT.pie.paddingAngle}
                 dataKey="value"
-                label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                labelLine={false}
               >
                 {chartData.map((entry, index) => (
                   <Cell key={index} fill={entry.color} />
@@ -123,7 +121,7 @@ export const CategoryChart: React.FC<CategoryChartProps> = ({
                   'Сумма'
                 ]}
               />
-              <Legend />
+              <Legend {...PIE_CHART_LAYOUT.legend} />
             </PieChart>
           ) : (
             <BarChart data={chartData} layout="vertical">

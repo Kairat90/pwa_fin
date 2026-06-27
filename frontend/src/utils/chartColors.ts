@@ -84,3 +84,35 @@ export function buildChartPalette(count: number, seed: string): string[] {
 
   return palette
 }
+
+/** Отступы и позиция круговой диаграммы относительно легенды */
+export const PIE_CHART_LAYOUT = {
+  margin: { top: 8, right: 16, bottom: 72, left: 16 },
+  pie: {
+    cx: '50%',
+    cy: '42%',
+    paddingAngle: 2
+  },
+  legend: {
+    verticalAlign: 'bottom' as const,
+    align: 'center' as const,
+    wrapperStyle: { paddingTop: 24, fontSize: 12, lineHeight: '1.6' },
+    iconSize: 10
+  }
+}
+
+/** Компактная версия для дашборда (меньше категорий) */
+export const PIE_CHART_LAYOUT_COMPACT = {
+  margin: { top: 8, right: 12, bottom: 64, left: 12 },
+  pie: {
+    cx: '50%',
+    cy: '40%',
+    paddingAngle: 2
+  },
+  legend: {
+    verticalAlign: 'bottom' as const,
+    align: 'center' as const,
+    wrapperStyle: { paddingTop: 20, fontSize: 11, lineHeight: '1.5' },
+    iconSize: 10
+  }
+}
