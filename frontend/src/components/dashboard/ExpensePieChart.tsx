@@ -23,7 +23,7 @@ export const ExpensePieChart: React.FC<ExpensePieChartProps> = ({ data }) => {
     )
 
     const items = topItems.map((item, index) => ({
-      name: `${item.icon} ${item.name}`,
+      name: item.name,
       value: item.amount,
       percentage: item.percentage,
       color: palette[index]
@@ -33,7 +33,7 @@ export const ExpensePieChart: React.FC<ExpensePieChartProps> = ({ data }) => {
       const otherTotal = data.slice(6).reduce((sum, item) => sum + item.amount, 0)
       const otherPercentage = data.slice(6).reduce((sum, item) => sum + item.percentage, 0)
       items.push({
-        name: '📦 Прочее',
+        name: 'Прочее',
         value: otherTotal,
         percentage: otherPercentage,
         color: CHART_OTHER_COLOR
