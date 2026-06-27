@@ -14,17 +14,13 @@ import {
 } from 'recharts'
 import { CategoryBreakdown } from '../../api/supabase'
 import { cn } from '../../utils/cn'
+import { CHART_OTHER_COLOR, resolveCategoryChartColor } from '../../utils/chartColors'
 
 interface CategoryChartProps {
   data: CategoryBreakdown[]
   type: 'income' | 'expense'
   chartType?: 'pie' | 'bar'
 }
-
-const COLORS = [
-  '#4F46E5', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
-  '#EC4899', '#14B8A6', '#F97316', '#6B7280', '#1F2937'
-]
 
 export const CategoryChart: React.FC<CategoryChartProps> = ({
   data,
@@ -40,11 +36,11 @@ export const CategoryChart: React.FC<CategoryChartProps> = ({
     )
   }
 
-  const chartData = data.slice(0, 8).map((item) => ({
+  const chartData = data.slice(0, 8).map((item, index) => ({
     name: `${item.icon} ${item.name}`,
     value: item.amount,
     percentage: item.percentage,
-    color: item.color || COLORS[0],
+    color: resolveCategoryChartColor(item.color, index),
     count: item.count
   }))
 
@@ -55,7 +51,7 @@ export const CategoryChart: React.FC<CategoryChartProps> = ({
       name: '📦 Прочее',
       value: otherTotal,
       percentage: otherPercentage,
-      color: '#9CA3AF',
+      color: CHART_OTHER_COLOR,
       count: data.slice(8).reduce((sum, item) => sum + item.count, 0)
     })
   }
@@ -107,7 +103,7 @@ export const CategoryChart: React.FC<CategoryChartProps> = ({
                 labelLine={false}
               >
                 {chartData.map((entry, index) => (
-                  <Cell key={index} fill={entry.color || COLORS[index % COLORS.length]} />
+                  <Cell key={index} fill={entry.color} />
                 ))}
               </Pie>
               <Tooltip
@@ -128,7 +124,7 @@ export const CategoryChart: React.FC<CategoryChartProps> = ({
               />
               <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                 {chartData.map((entry, index) => (
-                  <Cell key={index} fill={entry.color || COLORS[index % COLORS.length]} />
+                  <Cell key={index} fill={entry.color} />
                 ))}
               </Bar>
             </BarChart>

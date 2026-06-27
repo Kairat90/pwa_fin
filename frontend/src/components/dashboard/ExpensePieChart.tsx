@@ -1,13 +1,12 @@
 import React from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
 import { CategoryBreakdown } from '../../api/supabase'
+import { CHART_OTHER_COLOR, resolveCategoryChartColor } from '../../utils/chartColors'
 
 interface ExpensePieChartProps {
   data: CategoryBreakdown[]
   type?: 'income' | 'expense'
 }
-
-const COLORS = ['#4F46E5', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316']
 
 export const ExpensePieChart: React.FC<ExpensePieChartProps> = ({ data }) => {
   if (data.length === 0) {
@@ -18,11 +17,11 @@ export const ExpensePieChart: React.FC<ExpensePieChartProps> = ({ data }) => {
     )
   }
 
-  const chartData = data.slice(0, 6).map((item) => ({
+  const chartData = data.slice(0, 6).map((item, index) => ({
     name: `${item.icon} ${item.name}`,
     value: item.amount,
     percentage: item.percentage,
-    color: item.color || COLORS[0]
+    color: resolveCategoryChartColor(item.color, index)
   }))
 
   if (data.length > 6) {
@@ -32,7 +31,7 @@ export const ExpensePieChart: React.FC<ExpensePieChartProps> = ({ data }) => {
       name: '📦 Прочее',
       value: otherTotal,
       percentage: otherPercentage,
-      color: '#9CA3AF'
+      color: CHART_OTHER_COLOR
     })
   }
 
@@ -52,7 +51,7 @@ export const ExpensePieChart: React.FC<ExpensePieChartProps> = ({ data }) => {
             dataKey="value"
           >
             {chartData.map((entry, index) => (
-              <Cell key={index} fill={entry.color || COLORS[index % COLORS.length]} />
+              <Cell key={index} fill={entry.color} />
             ))}
           </Pie>
           <Tooltip
