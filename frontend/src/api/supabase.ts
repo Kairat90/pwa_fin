@@ -188,6 +188,8 @@ export type DebtPaymentData = {
   date: string
   note?: string
   createTransaction?: boolean
+  /** Счёт для транзакции при погашении (может отличаться от счёта долга) */
+  accountId?: string
 }
 
 export type DebtStats = {
@@ -931,7 +933,11 @@ export const supabaseApi = {
     ): Promise<{ payment: DebtPayment; remainingAmount: number; isFullyPaid: boolean }> => {
       const { data, error } = await supabase.rpc('add_debt_payment', {
         debt_id: debtId,
-        ...toSnakeCase(payload as Record<string, unknown>)
+        amount: payload.amount,
+        date: payload.date,
+        note: payload.note ?? null,
+        create_transaction: payload.createTransaction ?? true,
+        payment_account_id: payload.accountId ?? null
       })
       if (error) throw new Error(error.message)
       return mapKeys(data)

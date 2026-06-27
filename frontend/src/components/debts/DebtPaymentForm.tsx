@@ -3,9 +3,9 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
-import { Debt } from '../../types'
+import { Account, Debt } from '../../types'
 import { supabaseApi, getErrorMessage } from '../../api/supabase'
-import { formatCurrency } from '../../utils/currency'
+import { formatCurrency, normalizeCurrency } from '../../utils/currency'
 import { dateInputToIso, toDateInputValue } from '../../utils/dateInput'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
@@ -15,8 +15,12 @@ const paymentSchema = z.object({
   amount: z.coerce.number().min(0.01, 'Сумма должна быть больше 0'),
   date: z.string().min(1, 'Дата обязательна'),
   note: z.string().optional(),
+  accountId: z.string().optional(),
   createTransaction: z.boolean().default(true)
-})
+}).refine(
+  (data) => !data.createTransaction || Boolean(data.accountId),
+  { message: 'Выберите счёт для транзакции', path: ['accountId'] }
+)
 
 type PaymentFormData = z.infer<typeof paymentSchema>
 
@@ -27,6 +31,7 @@ interface DebtPaymentFormProps {
   debt: Debt
 }
 
+/** Форма платежа по долгу с выбором счёта для транзакции */
 export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
   isOpen,
   onClose,
@@ -34,32 +39,62 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
   debt
 }) => {
   const [loading, setLoading] = useState(false)
+  const [accounts, setAccounts] = useState<Account[]>([])
+  const [loadingAccounts, setLoadingAccounts] = useState(false)
   const remainingAmount = debt.remainingAmount ?? Number(debt.amount)
 
   const {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors }
   } = useForm<PaymentFormData>({
     resolver: zodResolver(paymentSchema),
     defaultValues: {
       date: toDateInputValue(),
       createTransaction: true,
-      amount: remainingAmount
+      amount: remainingAmount,
+      accountId: debt.accountId || ''
     }
   })
 
+  const createTransaction = watch('createTransaction')
+
   useEffect(() => {
-    if (isOpen) {
-      reset({
-        date: toDateInputValue(),
-        createTransaction: true,
-        amount: remainingAmount,
-        note: ''
-      })
+    if (!isOpen) {
+      return
     }
-  }, [isOpen, remainingAmount, reset])
+
+    const loadAccounts = async () => {
+      try {
+        setLoadingAccounts(true)
+        const list = await supabaseApi.accounts.getAll()
+        const active = list.filter((a) => !a.isArchived)
+        setAccounts(active)
+
+        const defaultAccount =
+          active.find((a) => a.id === debt.accountId)?.id ||
+          active.find((a) => normalizeCurrency(a.currency) === normalizeCurrency(debt.currency))?.id ||
+          active[0]?.id ||
+          ''
+
+        reset({
+          date: toDateInputValue(),
+          createTransaction: true,
+          amount: remainingAmount,
+          note: '',
+          accountId: defaultAccount
+        })
+      } catch {
+        toast.error('Не удалось загрузить счета')
+      } finally {
+        setLoadingAccounts(false)
+      }
+    }
+
+    void loadAccounts()
+  }, [isOpen, debt.accountId, debt.currency, remainingAmount, reset])
 
   const onSubmit = async (data: PaymentFormData) => {
     try {
@@ -68,7 +103,8 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
         amount: data.amount,
         date: dateInputToIso(data.date),
         note: data.note,
-        createTransaction: data.createTransaction
+        createTransaction: data.createTransaction,
+        accountId: data.createTransaction ? data.accountId : undefined
       })
 
       if (result.isFullyPaid) {
@@ -85,19 +121,30 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
     }
   }
 
+  const debtTypeHint =
+    debt.type === 'iOwe'
+      ? 'С какого счёта списать возврат долга'
+      : 'На какой счёт зачислить возврат'
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Добавить платеж" size="md">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div className="bg-gray-50 rounded-lg p-4">
+        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">Остаток долга</span>
-            <span className="font-bold text-gray-900">
+            <span className="text-sm text-gray-600 dark:text-gray-400">Остаток долга</span>
+            <span className="font-bold text-gray-900 dark:text-gray-100">
               {formatCurrency(remainingAmount, debt.currency)}
             </span>
           </div>
           <div className="flex items-center justify-between mt-1">
-            <span className="text-sm text-gray-600">Контакт</span>
-            <span className="text-gray-900">{debt.contact?.name}</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">Контакт</span>
+            <span className="text-gray-900 dark:text-gray-100">{debt.contact?.name}</span>
+          </div>
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-sm text-gray-600 dark:text-gray-400">Тип</span>
+            <span className="text-gray-900 dark:text-gray-100">
+              {debt.type === 'iOwe' ? 'Я должен' : 'Мне должны'}
+            </span>
           </div>
         </div>
 
@@ -111,10 +158,10 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
         />
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Дата</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Дата</label>
           <input
             type="date"
-            className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
             {...register('date')}
           />
           {errors.date && (
@@ -136,12 +183,36 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
             className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
             {...register('createTransaction')}
           />
-          <label htmlFor="createTransaction" className="text-sm text-gray-700">
+          <label htmlFor="createTransaction" className="text-sm text-gray-700 dark:text-gray-300">
             Создать транзакцию в бюджете
           </label>
         </div>
 
-        <div className="flex gap-3 pt-4 border-t border-gray-100">
+        {createTransaction && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Счёт для транзакции *
+            </label>
+            <select
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              disabled={loadingAccounts}
+              {...register('accountId')}
+            >
+              <option value="">Выберите счёт</option>
+              {accounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.icon ? `${account.icon} ` : ''}{account.name} ({account.currency})
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{debtTypeHint}</p>
+            {errors.accountId && (
+              <p className="mt-1 text-sm text-red-600">{errors.accountId.message}</p>
+            )}
+          </div>
+        )}
+
+        <div className="flex gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
           <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
             Отмена
           </Button>
