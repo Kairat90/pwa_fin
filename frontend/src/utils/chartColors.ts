@@ -87,32 +87,36 @@ export function buildChartPalette(count: number, seed: string): string[] {
 
 /** Отступы и позиция круговой диаграммы относительно легенды */
 export const PIE_CHART_LAYOUT = {
-  margin: { top: 8, right: 16, bottom: 72, left: 16 },
+  margin: { top: 12, right: 16, bottom: 84, left: 16 },
   pie: {
     cx: '50%',
-    cy: '42%',
-    paddingAngle: 2
+    cy: '44%',
+    paddingAngle: 2,
+    innerRadius: 52,
+    outerRadius: 82
   },
   legend: {
     verticalAlign: 'bottom' as const,
     align: 'center' as const,
-    wrapperStyle: { paddingTop: 24, fontSize: 12, lineHeight: '1.6' },
-    iconSize: 10
+    wrapperStyle: { paddingTop: 28, fontSize: 14, lineHeight: '1.65' },
+    iconSize: 12
   }
 }
 
 /** Компактная версия для дашборда (меньше категорий) */
 export const PIE_CHART_LAYOUT_COMPACT = {
-  margin: { top: 8, right: 12, bottom: 64, left: 12 },
+  margin: { top: 10, right: 12, bottom: 76, left: 12 },
   pie: {
     cx: '50%',
-    cy: '40%',
-    paddingAngle: 2
+    cy: '43%',
+    paddingAngle: 2,
+    innerRadius: 58,
+    outerRadius: 82
   },
   legend: {
     verticalAlign: 'bottom' as const,
     align: 'center' as const,
-    wrapperStyle: { paddingTop: 20, fontSize: 11, lineHeight: '1.5' },
-    iconSize: 10
+    wrapperStyle: { paddingTop: 24, fontSize: 13, lineHeight: '1.6' },
+    iconSize: 12
   }
 }

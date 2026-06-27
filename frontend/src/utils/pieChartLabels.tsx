@@ -35,7 +35,7 @@ export function renderPiePercentLabel({
       fill="#ffffff"
       textAnchor="middle"
       dominantBaseline="central"
-      fontSize={11}
+      fontSize={12}
       fontWeight={600}
       stroke="rgba(0,0,0,0.35)"
       strokeWidth={0.6}

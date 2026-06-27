@@ -54,15 +54,15 @@ export const ExpensePieChart: React.FC<ExpensePieChartProps> = ({ data }) => {
   const total = data.reduce((sum, item) => sum + item.amount, 0)
 
   return (
-    <div className="h-72 sm:h-80 w-full">
+    <div className="h-80 sm:h-96 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart margin={PIE_CHART_LAYOUT_COMPACT.margin}>
           <Pie
             data={chartData}
             cx={PIE_CHART_LAYOUT_COMPACT.pie.cx}
             cy={PIE_CHART_LAYOUT_COMPACT.pie.cy}
-            innerRadius={52}
-            outerRadius={72}
+            innerRadius={PIE_CHART_LAYOUT_COMPACT.pie.innerRadius}
+            outerRadius={PIE_CHART_LAYOUT_COMPACT.pie.outerRadius}
             paddingAngle={PIE_CHART_LAYOUT_COMPACT.pie.paddingAngle}
             dataKey="value"
             label={renderPiePercentLabel}

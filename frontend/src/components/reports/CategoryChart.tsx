@@ -99,7 +99,7 @@ export const CategoryChart: React.FC<CategoryChartProps> = ({
         </button>
       </div>
 
-      <div className={cn('w-full', chartType === 'pie' ? 'h-80 sm:h-96' : 'h-64')}>
+      <div className={cn('w-full', chartType === 'pie' ? 'h-96 sm:h-[28rem]' : 'h-64')}>
         <ResponsiveContainer width="100%" height="100%">
           {chartType === 'pie' ? (
             <PieChart margin={PIE_CHART_LAYOUT.margin}>
@@ -107,8 +107,8 @@ export const CategoryChart: React.FC<CategoryChartProps> = ({
                 data={chartData}
                 cx={PIE_CHART_LAYOUT.pie.cx}
                 cy={PIE_CHART_LAYOUT.pie.cy}
-                innerRadius={48}
-                outerRadius={68}
+                innerRadius={PIE_CHART_LAYOUT.pie.innerRadius}
+                outerRadius={PIE_CHART_LAYOUT.pie.outerRadius}
                 paddingAngle={PIE_CHART_LAYOUT.pie.paddingAngle}
                 dataKey="value"
                 label={renderPiePercentLabel}
