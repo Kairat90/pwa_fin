@@ -949,13 +949,14 @@ export const supabaseApi = {
 
     updatePayment: async (
       paymentId: string,
-      payload: Pick<DebtPaymentData, 'amount' | 'date' | 'note'>
+      payload: Pick<DebtPaymentData, 'amount' | 'date' | 'note' | 'accountId'>
     ): Promise<{ payment: DebtPayment }> => {
       const { data, error } = await supabase.rpc('update_debt_payment', {
         payment_id: paymentId,
         amount: payload.amount,
         date: payload.date,
-        note: payload.note ?? null
+        note: payload.note ?? null,
+        payment_account_id: payload.accountId ?? null
       })
       if (error) throw new Error(error.message)
       return mapKeys(data)

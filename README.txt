@@ -69,6 +69,7 @@ SQL-миграции — вручную в Supabase SQL Editor
 20250111_user_settings.sql         — валюта, удаление аккаунта
 20250112_add_debt_payment_account.sql — счёт при погашении
 20250113_debt_payment_types.sql    — погашение / увеличение долга, правка операций
+20250114_fix_debt_amount_ambiguous.sql — fix ambiguous amount, счёт при редактировании
 
 УЛУЧШЕНИЯ (СДЕЛАННЫЕ В РАБОТЕ НАД ПРОЕКТОМ)
 -------------------------------------------

@@ -61,6 +61,7 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loadingAccounts, setLoadingAccounts] = useState(false)
   const isEdit = Boolean(payment)
+  const hasLinkedTransaction = Boolean(payment?.transactionId)
   const labels = MODE_LABELS[mode]
   const remainingAmount = debt.remainingAmount ?? Number(debt.amount)
 
@@ -100,12 +101,23 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
           active[0]?.id ||
           ''
 
+        let accountId = defaultAccount
+
+        if (payment?.transactionId) {
+          try {
+            const tx = await supabaseApi.transactions.getOne(payment.transactionId)
+            accountId = tx.accountId || defaultAccount
+          } catch {
+            // оставляем счёт по умолчанию
+          }
+        }
+
         reset({
           date: payment ? toDateInputValue(payment.date) : toDateInputValue(),
           createTransaction: !isEdit,
           amount: payment ? Number(payment.amount) : (mode === 'repayment' ? remainingAmount : undefined),
           note: payment?.note || '',
-          accountId: defaultAccount
+          accountId
         })
       } catch {
         toast.error('Не удалось загрузить счета')
@@ -122,10 +134,16 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
       setLoading(true)
 
       if (isEdit && payment) {
+        if (hasLinkedTransaction && !data.accountId) {
+          toast.error('Выберите счёт для транзакции')
+          return
+        }
+
         await supabaseApi.debts.updatePayment(payment.id, {
           amount: data.amount,
           date: dateInputToIso(data.date),
-          note: data.note
+          note: data.note,
+          accountId: hasLinkedTransaction ? data.accountId : undefined
         })
         toast.success('Операция обновлена')
       } else {
@@ -212,43 +230,41 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
         />
 
         {!isEdit && (
-          <>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="createTransaction"
-                className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
-                {...register('createTransaction')}
-              />
-              <label htmlFor="createTransaction" className="text-sm text-gray-700 dark:text-gray-300">
-                Создать транзакцию в бюджете
-              </label>
-            </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="createTransaction"
+              className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
+              {...register('createTransaction')}
+            />
+            <label htmlFor="createTransaction" className="text-sm text-gray-700 dark:text-gray-300">
+              Создать транзакцию в бюджете
+            </label>
+          </div>
+        )}
 
-            {createTransaction && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Счёт для транзакции *
-                </label>
-                <select
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  disabled={loadingAccounts}
-                  {...register('accountId')}
-                >
-                  <option value="">Выберите счёт</option>
-                  {accounts.map((account) => (
-                    <option key={account.id} value={account.id}>
-                      {account.icon ? `${account.icon} ` : ''}{account.name} ({account.currency})
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{accountHint}</p>
-                {errors.accountId && (
-                  <p className="mt-1 text-sm text-red-600">{errors.accountId.message}</p>
-                )}
-              </div>
+        {(hasLinkedTransaction || (!isEdit && createTransaction)) && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Счёт для транзакции *
+            </label>
+            <select
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              disabled={loadingAccounts}
+              {...register('accountId')}
+            >
+              <option value="">Выберите счёт</option>
+              {accounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.icon ? `${account.icon} ` : ''}{account.name} ({account.currency})
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{accountHint}</p>
+            {errors.accountId && (
+              <p className="mt-1 text-sm text-red-600">{errors.accountId.message}</p>
             )}
-          </>
+          </div>
         )}
 
         <div className="flex gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">

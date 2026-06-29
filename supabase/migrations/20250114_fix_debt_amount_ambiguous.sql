@@ -1,128 +1,5 @@
--- Типы операций по долгу: погашение / увеличение, редактирование и удаление
-
-ALTER TABLE public.debt_payments
-    ADD COLUMN IF NOT EXISTS entry_type TEXT NOT NULL DEFAULT 'repayment'
-        CHECK (entry_type IN ('repayment', 'increase'));
-
-COMMENT ON COLUMN public.debt_payments.entry_type IS 'repayment — погашение, increase — увеличение долга';
-
--- Пересчёт статуса долга после изменений в операциях
-CREATE OR REPLACE FUNCTION public.recalculate_debt_status(p_debt_id UUID)
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-    debt_row public.debts%ROWTYPE;
-    paid_amount DECIMAL;
-    remaining_amount DECIMAL;
-BEGIN
-    SELECT * INTO debt_row FROM public.debts WHERE id = p_debt_id;
-
-    IF NOT FOUND THEN
-        RETURN;
-    END IF;
-
-    IF debt_row.status = 'writtenOff' THEN
-        RETURN;
-    END IF;
-
-    SELECT COALESCE(SUM(dp.amount), 0) INTO paid_amount
-    FROM public.debt_payments dp
-    WHERE dp.debt_id = p_debt_id AND dp.entry_type = 'repayment';
-
-    remaining_amount := debt_row.amount - paid_amount;
-
-    IF remaining_amount <= 0 THEN
-        UPDATE public.debts
-        SET status = 'settled',
-            settled_date = COALESCE(settled_date, NOW()),
-            updated_at = NOW()
-        WHERE id = p_debt_id;
-    ELSE
-        UPDATE public.debts
-        SET status = CASE
-                WHEN debt_row.due_date IS NOT NULL AND debt_row.due_date < NOW() THEN 'overdue'
-                ELSE 'active'
-            END,
-            settled_date = NULL,
-            updated_at = NOW()
-        WHERE id = p_debt_id;
-    END IF;
-END;
-$$;
-
--- Создание транзакции для операции по долгу
-CREATE OR REPLACE FUNCTION public.create_debt_entry_transaction(
-    p_debt public.debts,
-    p_contact_name TEXT,
-    p_amount DECIMAL,
-    p_entry_type TEXT,
-    p_date TIMESTAMPTZ,
-    p_note TEXT,
-    p_account_id UUID
-)
-RETURNS UUID
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-    uid UUID := auth.uid();
-    category_id UUID;
-    category_name TEXT;
-    tx_amount DECIMAL;
-    tx_id UUID;
-    prefix TEXT;
-BEGIN
-    IF p_account_id IS NULL THEN
-        RETURN NULL;
-    END IF;
-
-    IF NOT EXISTS (
-        SELECT 1 FROM public.accounts a
-        WHERE a.id = p_account_id AND a.user_id = uid AND NOT a.is_archived
-    ) THEN
-        RAISE EXCEPTION 'Счёт не найден или недоступен';
-    END IF;
-
-    IF p_entry_type = 'repayment' THEN
-        category_name := CASE WHEN p_debt.type = 'iOwe' THEN 'Долги' ELSE 'Возврат долгов' END;
-        prefix := 'Платеж по долгу: ';
-        tx_amount := CASE WHEN p_debt.type = 'iOwe' THEN -p_amount ELSE p_amount END;
-    ELSE
-        category_name := CASE WHEN p_debt.type = 'iOwe' THEN 'Долги' ELSE 'Возврат долгов' END;
-        prefix := 'Увеличение долга: ';
-        tx_amount := CASE WHEN p_debt.type = 'iOwe' THEN p_amount ELSE -p_amount END;
-    END IF;
-
-    SELECT c.id INTO category_id FROM public.categories c
-    WHERE c.user_id = uid AND c.name = category_name AND c.is_system = TRUE
-    LIMIT 1;
-
-    IF category_id IS NULL THEN
-        RETURN NULL;
-    END IF;
-
-    INSERT INTO public.transactions (user_id, account_id, category_id, amount, date, note, tags)
-    VALUES (
-        uid,
-        p_account_id,
-        category_id,
-        tx_amount,
-        p_date,
-        prefix || p_contact_name ||
-            CASE WHEN p_note IS NOT NULL AND p_note <> '' THEN ': ' || p_note ELSE '' END,
-        ARRAY['debt', p_entry_type]
-    )
-    RETURNING id INTO tx_id;
-
-    RETURN tx_id;
-END;
-$$;
-
-DROP FUNCTION IF EXISTS public.add_debt_payment(UUID, DECIMAL, TIMESTAMPTZ, TEXT, BOOLEAN, UUID);
+-- Исправление ambiguous column "amount" при увеличении долга
+-- + смена счёта при редактировании операции
 
 CREATE OR REPLACE FUNCTION public.add_debt_payment(
     debt_id UUID,
@@ -143,7 +20,6 @@ DECLARE
     debt_row public.debts%ROWTYPE;
     contact_row public.contacts%ROWTYPE;
     paid_amount DECIMAL;
-    remaining_amount DECIMAL;
     payment_row public.debt_payments%ROWTYPE;
     tx_account_id UUID;
     tx_id UUID;
@@ -234,6 +110,8 @@ BEGIN
     );
 END;
 $$;
+
+DROP FUNCTION IF EXISTS public.update_debt_payment(UUID, DECIMAL, TIMESTAMPTZ, TEXT);
 
 CREATE OR REPLACE FUNCTION public.update_debt_payment(
     payment_id UUID,
@@ -362,8 +240,6 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.recalculate_debt_status(UUID) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.create_debt_entry_transaction(public.debts, TEXT, DECIMAL, TEXT, TIMESTAMPTZ, TEXT, UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.add_debt_payment(UUID, DECIMAL, TIMESTAMPTZ, TEXT, BOOLEAN, UUID, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.update_debt_payment(UUID, DECIMAL, TIMESTAMPTZ, TEXT, UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.delete_debt_payment(UUID) TO authenticated;
