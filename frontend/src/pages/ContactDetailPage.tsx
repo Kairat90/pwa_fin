@@ -37,6 +37,10 @@ function debtRemaining(debt: Debt): number {
 }
 
 function paymentEntryLabel(payment: DebtPayment, debtType: Debt['type']): string {
+  if (payment.entryType === 'initial') {
+    return debtType === 'iOwe' ? 'Первоначальный займ' : 'Первоначальная выдача'
+  }
+
   if (payment.entryType === 'increase') {
     return debtType === 'iOwe' ? 'Увеличение долга' : 'Доп. выдача'
   }
@@ -97,7 +101,19 @@ const ContactDetailPage: React.FC = () => {
   }
 
   const handleEditPayment = (payment: DebtPayment) => {
-    openEntryForm(payment.entryType === 'increase' ? 'increase' : 'repayment', payment)
+    if (payment.id.startsWith('virtual-')) {
+      toast.error('Примените SQL-миграцию 20250115 для редактирования первоначального займа')
+      return
+    }
+
+    const mode: DebtEntryMode =
+      payment.entryType === 'increase'
+        ? 'increase'
+        : payment.entryType === 'initial'
+          ? 'initial'
+          : 'repayment'
+
+    openEntryForm(mode, payment)
   }
 
   const handleDeletePayment = async (payment: DebtPayment) => {
@@ -341,23 +357,31 @@ const ContactDetailPage: React.FC = () => {
           <div className="space-y-2">
             {payments.map((payment) => {
               const isIncrease = payment.entryType === 'increase'
+              const isInitial = payment.entryType === 'initial'
+              const isRepayment = !isIncrease && !isInitial
 
               return (
                 <div
                   key={payment.id}
                   className={cn(
                     'flex items-center justify-between gap-3 p-4 rounded-xl border',
-                    isIncrease
-                      ? 'border-amber-100 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20'
-                      : 'border-gray-100 bg-gray-50/50 dark:border-gray-800 dark:bg-gray-800/30'
+                    isInitial
+                      ? 'border-blue-100 bg-blue-50/50 dark:border-blue-900/40 dark:bg-blue-950/20'
+                      : isIncrease
+                        ? 'border-amber-100 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20'
+                        : 'border-gray-100 bg-gray-50/50 dark:border-gray-800 dark:bg-gray-800/30'
                   )}
                 >
                   <div className="min-w-0">
                     <p className={cn(
                       'font-medium',
-                      isIncrease ? 'text-amber-800 dark:text-amber-300' : 'text-gray-900 dark:text-gray-100'
+                      isInitial
+                        ? 'text-blue-800 dark:text-blue-300'
+                        : isIncrease
+                          ? 'text-amber-800 dark:text-amber-300'
+                          : 'text-gray-900 dark:text-gray-100'
                     )}>
-                      {isIncrease ? '+' : '−'}
+                      {isRepayment ? '−' : '+'}
                       {formatCurrency(Number(payment.amount), payment.currency)}
                     </p>
                     <p className="text-sm text-gray-500 truncate">

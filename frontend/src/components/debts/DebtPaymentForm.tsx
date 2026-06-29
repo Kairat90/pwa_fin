@@ -18,7 +18,7 @@ const entrySchema = z.object({
   accountId: z.string().optional(),
   createTransaction: z.boolean().default(true)
 }).refine(
-  (data) => data.createTransaction === false || Boolean(data.accountId),
+  (data) => !data.createTransaction || Boolean(data.accountId),
   { message: 'Выберите счёт для транзакции', path: ['accountId'] }
 )
 
@@ -45,6 +45,12 @@ const MODE_LABELS: Record<DebtEntryMode, { title: string; submit: string; amount
     submit: 'Увеличить долг',
     amount: 'Сумма увеличения *',
     note: 'Дополнительная сумма'
+  },
+  initial: {
+    title: 'Первоначальный займ',
+    submit: 'Сохранить',
+    amount: 'Сумма займа *',
+    note: 'Цель / примечание'
   }
 }
 
@@ -61,6 +67,7 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loadingAccounts, setLoadingAccounts] = useState(false)
   const isEdit = Boolean(payment)
+  const isInitialMode = mode === 'initial'
   const hasLinkedTransaction = Boolean(payment?.transactionId)
   const labels = MODE_LABELS[mode]
   const remainingAmount = debt.remainingAmount ?? Number(debt.amount)
@@ -82,6 +89,7 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
   })
 
   const createTransaction = watch('createTransaction')
+  const showAccountField = hasLinkedTransaction || isInitialMode || (!isEdit && createTransaction)
 
   useEffect(() => {
     if (!isOpen) {
@@ -134,7 +142,7 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
       setLoading(true)
 
       if (isEdit && payment) {
-        if (hasLinkedTransaction && !data.accountId) {
+        if (showAccountField && !data.accountId) {
           toast.error('Выберите счёт для транзакции')
           return
         }
@@ -143,7 +151,7 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
           amount: data.amount,
           date: dateInputToIso(data.date),
           note: data.note,
-          accountId: hasLinkedTransaction ? data.accountId : undefined
+          accountId: showAccountField ? data.accountId : undefined
         })
         toast.success('Операция обновлена')
       } else {
@@ -172,8 +180,11 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
     }
   }
 
-  const accountHint =
-    mode === 'repayment'
+  const accountHint = isInitialMode
+    ? debt.type === 'iOwe'
+      ? 'Счёт, с которого получены средства'
+      : 'Счёт, с которого выдан займ'
+    : mode === 'repayment'
       ? debt.type === 'iOwe'
         ? 'С какого счёта списать возврат долга'
         : 'На какой счёт зачислить возврат'
@@ -229,7 +240,7 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
           {...register('note')}
         />
 
-        {!isEdit && (
+        {!isEdit && !isInitialMode && (
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -243,7 +254,7 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
           </div>
         )}
 
-        {(hasLinkedTransaction || (!isEdit && createTransaction)) && (
+        {showAccountField && (
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Счёт для транзакции *
@@ -274,7 +285,13 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
           <Button
             type="submit"
             loading={loading}
-            className={`flex-1 ${mode === 'repayment' ? 'bg-green-600 hover:bg-green-700' : 'bg-amber-600 hover:bg-amber-700'}`}
+            className={`flex-1 ${
+              mode === 'repayment'
+                ? 'bg-green-600 hover:bg-green-700'
+                : mode === 'initial'
+                  ? 'bg-blue-600 hover:bg-blue-700'
+                  : 'bg-amber-600 hover:bg-amber-700'
+            }`}
           >
             {isEdit ? 'Сохранить' : labels.submit}
           </Button>

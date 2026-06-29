@@ -106,7 +106,19 @@ const DebtsPage: React.FC = () => {
   }
 
   const handleEditPayment = (payment: DebtPayment) => {
-    openEntryForm(payment.entryType === 'increase' ? 'increase' : 'repayment', payment)
+    if (payment.id.startsWith('virtual-')) {
+      toast.error('Примените SQL-миграцию 20250115 для редактирования первоначального займа')
+      return
+    }
+
+    const mode: DebtEntryMode =
+      payment.entryType === 'increase'
+        ? 'increase'
+        : payment.entryType === 'initial'
+          ? 'initial'
+          : 'repayment'
+
+    openEntryForm(mode, payment)
   }
 
   const handleDeletePayment = async (payment: DebtPayment) => {

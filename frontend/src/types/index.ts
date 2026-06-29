@@ -122,10 +122,10 @@ export interface DebtPayment {
   date: string
   note?: string
   transactionId?: string
-  entryType?: 'repayment' | 'increase'
+  entryType?: 'repayment' | 'increase' | 'initial'
 }
 
-export type DebtEntryMode = 'repayment' | 'increase'
+export type DebtEntryMode = 'repayment' | 'increase' | 'initial'
 
 export interface ApiResponse<T> {
   data: T

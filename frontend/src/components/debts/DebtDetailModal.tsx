@@ -5,6 +5,12 @@ import { X, MinusCircle, PlusCircle, Pencil, Trash2 } from 'lucide-react'
 import { Debt, DebtPayment } from '../../types'
 import { formatCurrency } from '../../utils/currency'
 import { cn } from '../../utils/cn'
+import {
+  canDeleteDebtPayment,
+  canEditDebtPayment,
+  debtEntryTypeLabel,
+  getDebtHistoryPayments
+} from '../../utils/debtHistory'
 import { Button } from '../ui/Button'
 import { EMOJI_BOX_16, ICON_16 } from '../../utils/iconSize'
 
@@ -16,10 +22,6 @@ interface DebtDetailModalProps {
   onIncrease?: () => void
   onEditPayment?: (payment: DebtPayment) => void
   onDeletePayment?: (payment: DebtPayment) => void
-}
-
-function paymentTypeLabel(payment: DebtPayment): string {
-  return payment.entryType === 'increase' ? 'Увеличение' : 'Погашение'
 }
 
 /** Модальное окно деталей долга с историей операций */
@@ -38,9 +40,7 @@ export const DebtDetailModal: React.FC<DebtDetailModalProps> = ({
   const paidAmount = debt.paidAmount ?? (Number(debt.amount) - remainingAmount)
   const progress = Number(debt.amount) > 0 ? (paidAmount / Number(debt.amount)) * 100 : 0
   const canOperate = debt.status !== 'writtenOff'
-  const sortedPayments = [...(debt.payments ?? [])].sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-  )
+  const historyPayments = getDebtHistoryPayments(debt)
 
   return (
     <div
@@ -149,42 +149,54 @@ export const DebtDetailModal: React.FC<DebtDetailModalProps> = ({
 
           <div>
             <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">
-              История операций ({sortedPayments.length})
+              История операций ({historyPayments.length})
             </h4>
 
-            {sortedPayments.length === 0 ? (
+            {historyPayments.length === 0 ? (
               <p className="text-sm text-gray-500 text-center py-6">Операций пока нет</p>
             ) : (
               <div className="space-y-2">
-                {sortedPayments.map((payment) => {
+                {historyPayments.map((payment) => {
                   const isIncrease = payment.entryType === 'increase'
+                  const isInitial = payment.entryType === 'initial'
+                  const isRepayment = !isIncrease && !isInitial
+                  const editable = canEditDebtPayment(payment)
+                  const deletable = canDeleteDebtPayment(payment)
 
                   return (
                     <div
                       key={payment.id}
                       className={cn(
                         'flex items-center justify-between gap-3 p-3 rounded-lg border',
-                        isIncrease
-                          ? 'border-amber-200 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20'
-                          : 'border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/40'
+                        isInitial
+                          ? 'border-blue-200 bg-blue-50/50 dark:border-blue-900/40 dark:bg-blue-950/20'
+                          : isIncrease
+                            ? 'border-amber-200 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20'
+                            : 'border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/40'
                       )}
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className={cn(
                             'font-medium',
-                            isIncrease ? 'text-amber-800 dark:text-amber-300' : 'text-gray-900 dark:text-gray-100'
+                            isInitial
+                              ? 'text-blue-800 dark:text-blue-300'
+                              : isIncrease
+                                ? 'text-amber-800 dark:text-amber-300'
+                                : 'text-gray-900 dark:text-gray-100'
                           )}>
-                            {isIncrease ? '+' : '−'}
+                            {isRepayment ? '−' : '+'}
                             {formatCurrency(Number(payment.amount), debt.currency)}
                           </p>
                           <span className={cn(
                             'text-xs px-2 py-0.5 rounded-full',
-                            isIncrease
-                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
-                              : 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
+                            isInitial
+                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
+                              : isIncrease
+                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                                : 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
                           )}>
-                            {paymentTypeLabel(payment)}
+                            {debtEntryTypeLabel(payment.entryType)}
                           </span>
                         </div>
                         {payment.note && (
@@ -195,9 +207,9 @@ export const DebtDetailModal: React.FC<DebtDetailModalProps> = ({
                         </p>
                       </div>
 
-                      {(onEditPayment || onDeletePayment) && (
+                      {(onEditPayment || onDeletePayment) && (editable || deletable) && (
                         <div className="flex items-center gap-1 shrink-0">
-                          {onEditPayment && (
+                          {onEditPayment && editable && (
                             <button
                               type="button"
                               onClick={() => onEditPayment(payment)}
@@ -207,7 +219,7 @@ export const DebtDetailModal: React.FC<DebtDetailModalProps> = ({
                               <Pencil className={ICON_16} />
                             </button>
                           )}
-                          {onDeletePayment && (
+                          {onDeletePayment && deletable && (
                             <button
                               type="button"
                               onClick={() => onDeletePayment(payment)}
