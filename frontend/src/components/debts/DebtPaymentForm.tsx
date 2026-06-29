@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
-import { Account, Debt } from '../../types'
+import { Account, Debt, DebtEntryMode, DebtPayment } from '../../types'
 import { supabaseApi, getErrorMessage } from '../../api/supabase'
 import { formatCurrency, normalizeCurrency } from '../../utils/currency'
 import { dateInputToIso, toDateInputValue } from '../../utils/dateInput'
@@ -11,36 +11,57 @@ import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Modal } from '../ui/Modal'
 
-const paymentSchema = z.object({
+const entrySchema = z.object({
   amount: z.coerce.number().min(0.01, 'Сумма должна быть больше 0'),
   date: z.string().min(1, 'Дата обязательна'),
   note: z.string().optional(),
   accountId: z.string().optional(),
   createTransaction: z.boolean().default(true)
 }).refine(
-  (data) => !data.createTransaction || Boolean(data.accountId),
+  (data) => data.createTransaction === false || Boolean(data.accountId),
   { message: 'Выберите счёт для транзакции', path: ['accountId'] }
 )
 
-type PaymentFormData = z.infer<typeof paymentSchema>
+type EntryFormData = z.infer<typeof entrySchema>
 
 interface DebtPaymentFormProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: () => void
   debt: Debt
+  mode: DebtEntryMode
+  payment?: DebtPayment | null
 }
 
-/** Форма платежа по долгу с выбором счёта для транзакции */
+const MODE_LABELS: Record<DebtEntryMode, { title: string; submit: string; amount: string; note: string }> = {
+  repayment: {
+    title: 'Погашение долга',
+    submit: 'Добавить погашение',
+    amount: 'Сумма погашения *',
+    note: 'Частичный возврат'
+  },
+  increase: {
+    title: 'Увеличение долга',
+    submit: 'Увеличить долг',
+    amount: 'Сумма увеличения *',
+    note: 'Дополнительная сумма'
+  }
+}
+
+/** Форма погашения / увеличения долга (создание и редактирование) */
 export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
   isOpen,
   onClose,
   onSuccess,
-  debt
+  debt,
+  mode,
+  payment = null
 }) => {
   const [loading, setLoading] = useState(false)
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loadingAccounts, setLoadingAccounts] = useState(false)
+  const isEdit = Boolean(payment)
+  const labels = MODE_LABELS[mode]
   const remainingAmount = debt.remainingAmount ?? Number(debt.amount)
 
   const {
@@ -49,8 +70,8 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
     reset,
     watch,
     formState: { errors }
-  } = useForm<PaymentFormData>({
-    resolver: zodResolver(paymentSchema),
+  } = useForm<EntryFormData>({
+    resolver: zodResolver(entrySchema),
     defaultValues: {
       date: toDateInputValue(),
       createTransaction: true,
@@ -80,10 +101,10 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
           ''
 
         reset({
-          date: toDateInputValue(),
-          createTransaction: true,
-          amount: remainingAmount,
-          note: '',
+          date: payment ? toDateInputValue(payment.date) : toDateInputValue(),
+          createTransaction: !isEdit,
+          amount: payment ? Number(payment.amount) : (mode === 'repayment' ? remainingAmount : undefined),
+          note: payment?.note || '',
           accountId: defaultAccount
         })
       } catch {
@@ -94,65 +115,81 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
     }
 
     void loadAccounts()
-  }, [isOpen, debt.accountId, debt.currency, remainingAmount, reset])
+  }, [isOpen, debt.accountId, debt.currency, isEdit, mode, payment, remainingAmount, reset])
 
-  const onSubmit = async (data: PaymentFormData) => {
+  const onSubmit = async (data: EntryFormData) => {
     try {
       setLoading(true)
-      const result = await supabaseApi.debts.addPayment(debt.id, {
-        amount: data.amount,
-        date: dateInputToIso(data.date),
-        note: data.note,
-        createTransaction: data.createTransaction,
-        accountId: data.createTransaction ? data.accountId : undefined
-      })
 
-      if (result.isFullyPaid) {
-        toast.success('Долг полностью погашен!')
+      if (isEdit && payment) {
+        await supabaseApi.debts.updatePayment(payment.id, {
+          amount: data.amount,
+          date: dateInputToIso(data.date),
+          note: data.note
+        })
+        toast.success('Операция обновлена')
       } else {
-        toast.success(`Платеж добавлен. Остаток: ${formatCurrency(result.remainingAmount, debt.currency)}`)
+        const result = await supabaseApi.debts.addPayment(debt.id, {
+          amount: data.amount,
+          date: dateInputToIso(data.date),
+          note: data.note,
+          createTransaction: data.createTransaction,
+          accountId: data.createTransaction ? data.accountId : undefined,
+          entryType: mode
+        })
+
+        if (mode === 'repayment' && result.isFullyPaid) {
+          toast.success('Долг полностью погашен!')
+        } else {
+          toast.success(mode === 'repayment' ? 'Погашение добавлено' : 'Долг увеличен')
+        }
       }
+
       onSuccess()
       onClose()
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error) || 'Ошибка добавления платежа')
+      toast.error(getErrorMessage(error) || 'Ошибка сохранения')
     } finally {
       setLoading(false)
     }
   }
 
-  const debtTypeHint =
-    debt.type === 'iOwe'
-      ? 'С какого счёта списать возврат долга'
-      : 'На какой счёт зачислить возврат'
+  const accountHint =
+    mode === 'repayment'
+      ? debt.type === 'iOwe'
+        ? 'С какого счёта списать возврат долга'
+        : 'На какой счёт зачислить возврат'
+      : debt.type === 'iOwe'
+        ? 'На какой счёт поступили дополнительные средства'
+        : 'С какого счёта выдана дополнительная сумма'
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Добавить платеж" size="md">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={isEdit ? 'Редактировать операцию' : labels.title}
+      size="md"
+    >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Остаток долга</span>
+        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 space-y-1">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-600 dark:text-gray-400">Остаток</span>
             <span className="font-bold text-gray-900 dark:text-gray-100">
               {formatCurrency(remainingAmount, debt.currency)}
             </span>
           </div>
-          <div className="flex items-center justify-between mt-1">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Контакт</span>
-            <span className="text-gray-900 dark:text-gray-100">{debt.contact?.name}</span>
-          </div>
-          <div className="flex items-center justify-between mt-1">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Тип</span>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-600 dark:text-gray-400">Сумма долга</span>
             <span className="text-gray-900 dark:text-gray-100">
-              {debt.type === 'iOwe' ? 'Я должен' : 'Мне должны'}
+              {formatCurrency(Number(debt.amount), debt.currency)}
             </span>
           </div>
         </div>
 
         <Input
-          label="Сумма платежа *"
+          label={labels.amount}
           type="number"
           step="0.01"
-          placeholder={String(remainingAmount)}
           error={errors.amount?.message}
           {...register('amount')}
         />
@@ -164,60 +201,66 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
             className="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
             {...register('date')}
           />
-          {errors.date && (
-            <p className="mt-1 text-sm text-red-600">{errors.date.message}</p>
-          )}
+          {errors.date && <p className="mt-1 text-sm text-red-600">{errors.date.message}</p>}
         </div>
 
         <Input
           label="Примечание (опционально)"
-          placeholder="Частичный возврат"
+          placeholder={labels.note}
           error={errors.note?.message}
           {...register('note')}
         />
 
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="createTransaction"
-            className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
-            {...register('createTransaction')}
-          />
-          <label htmlFor="createTransaction" className="text-sm text-gray-700 dark:text-gray-300">
-            Создать транзакцию в бюджете
-          </label>
-        </div>
+        {!isEdit && (
+          <>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="createTransaction"
+                className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
+                {...register('createTransaction')}
+              />
+              <label htmlFor="createTransaction" className="text-sm text-gray-700 dark:text-gray-300">
+                Создать транзакцию в бюджете
+              </label>
+            </div>
 
-        {createTransaction && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Счёт для транзакции *
-            </label>
-            <select
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
-              disabled={loadingAccounts}
-              {...register('accountId')}
-            >
-              <option value="">Выберите счёт</option>
-              {accounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.icon ? `${account.icon} ` : ''}{account.name} ({account.currency})
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{debtTypeHint}</p>
-            {errors.accountId && (
-              <p className="mt-1 text-sm text-red-600">{errors.accountId.message}</p>
+            {createTransaction && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Счёт для транзакции *
+                </label>
+                <select
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  disabled={loadingAccounts}
+                  {...register('accountId')}
+                >
+                  <option value="">Выберите счёт</option>
+                  {accounts.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.icon ? `${account.icon} ` : ''}{account.name} ({account.currency})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{accountHint}</p>
+                {errors.accountId && (
+                  <p className="mt-1 text-sm text-red-600">{errors.accountId.message}</p>
+                )}
+              </div>
             )}
-          </div>
+          </>
         )}
 
         <div className="flex gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
           <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
             Отмена
           </Button>
-          <Button type="submit" loading={loading} className="flex-1 bg-green-600 hover:bg-green-700">
-            Добавить платеж
+          <Button
+            type="submit"
+            loading={loading}
+            className={`flex-1 ${mode === 'repayment' ? 'bg-green-600 hover:bg-green-700' : 'bg-amber-600 hover:bg-amber-700'}`}
+          >
+            {isEdit ? 'Сохранить' : labels.submit}
           </Button>
         </div>
       </form>

@@ -5,6 +5,7 @@ import {
   Contact,
   Debt,
   DebtPayment,
+  DebtEntryMode,
   PaginatedResponse,
   ScheduledTransaction,
   Transaction,
@@ -188,8 +189,8 @@ export type DebtPaymentData = {
   date: string
   note?: string
   createTransaction?: boolean
-  /** Счёт для транзакции при погашении (может отличаться от счёта долга) */
   accountId?: string
+  entryType?: DebtEntryMode
 }
 
 export type DebtStats = {
@@ -214,8 +215,10 @@ export type ContactHistory = {
 
 async function enrichDebts(raw: Record<string, unknown>[]): Promise<Debt[]> {
   return raw.map((debt) => {
-    const payments = (debt.payments as Array<{ amount: number }>) ?? []
-    const paidAmount = payments.reduce((s, p) => s + Number(p.amount), 0)
+    const payments = (debt.payments as Array<{ amount: number; entryType?: string; entry_type?: string }>) ?? []
+    const paidAmount = payments
+      .filter((p) => (p.entryType ?? p.entry_type ?? 'repayment') === 'repayment')
+      .reduce((s, p) => s + Number(p.amount), 0)
     const amount = Number(debt.amount)
     return {
       ...(debt as unknown as Debt),
@@ -937,8 +940,29 @@ export const supabaseApi = {
         date: payload.date,
         note: payload.note ?? null,
         create_transaction: payload.createTransaction ?? true,
-        payment_account_id: payload.accountId ?? null
+        payment_account_id: payload.accountId ?? null,
+        entry_type: payload.entryType ?? 'repayment'
       })
+      if (error) throw new Error(error.message)
+      return mapKeys(data)
+    },
+
+    updatePayment: async (
+      paymentId: string,
+      payload: Pick<DebtPaymentData, 'amount' | 'date' | 'note'>
+    ): Promise<{ payment: DebtPayment }> => {
+      const { data, error } = await supabase.rpc('update_debt_payment', {
+        payment_id: paymentId,
+        amount: payload.amount,
+        date: payload.date,
+        note: payload.note ?? null
+      })
+      if (error) throw new Error(error.message)
+      return mapKeys(data)
+    },
+
+    deletePayment: async (paymentId: string): Promise<{ debtId: string }> => {
+      const { data, error } = await supabase.rpc('delete_debt_payment', { payment_id: paymentId })
       if (error) throw new Error(error.message)
       return mapKeys(data)
     },

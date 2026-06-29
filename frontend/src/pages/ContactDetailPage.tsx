@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
+import toast from 'react-hot-toast'
 import {
   ArrowLeft,
   Phone,
@@ -13,14 +14,15 @@ import {
   Plus,
   Star
 } from 'lucide-react'
-import { supabaseApi } from '../api/supabase'
-import { Debt } from '../types'
+import { supabaseApi, getErrorMessage } from '../api/supabase'
+import { Debt, DebtEntryMode, DebtPayment } from '../types'
 import { formatCurrency } from '../utils/currency'
 import { cn } from '../utils/cn'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { DebtDetailModal } from '../components/debts/DebtDetailModal'
+import { DebtPaymentForm } from '../components/debts/DebtPaymentForm'
 import { EMOJI_BOX_16, ICON_16 } from '../utils/iconSize'
 
 const DEBT_STATUS: Record<string, string> = {
@@ -34,17 +36,90 @@ function debtRemaining(debt: Debt): number {
   return Math.max(0, debt.remainingAmount ?? Number(debt.amount))
 }
 
+function paymentEntryLabel(payment: DebtPayment, debtType: Debt['type']): string {
+  if (payment.entryType === 'increase') {
+    return debtType === 'iOwe' ? 'Увеличение долга' : 'Доп. выдача'
+  }
+
+  return debtType === 'iOwe' ? 'Погашение долга' : 'Возврат долга'
+}
+
 /** Страница истории контакта: долги, платежи, итоги */
 const ContactDetailPage: React.FC = () => {
   const { contactId } = useParams<{ contactId: string }>()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null)
+  const [showDetailModal, setShowDetailModal] = useState(false)
+  const [showEntryForm, setShowEntryForm] = useState(false)
+  const [entryMode, setEntryMode] = useState<DebtEntryMode>('repayment')
+  const [editingPayment, setEditingPayment] = useState<DebtPayment | null>(null)
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['contactHistory', contactId],
     queryFn: () => supabaseApi.contacts.getHistory(contactId!),
     enabled: Boolean(contactId)
   })
+
+  const refreshDebtData = async (debtId?: string) => {
+    queryClient.invalidateQueries({ queryKey: ['contactHistory', contactId] })
+    queryClient.invalidateQueries({ queryKey: ['debts'] })
+    queryClient.invalidateQueries({ queryKey: ['debtStats'] })
+    queryClient.invalidateQueries({ queryKey: ['accounts'] })
+    queryClient.invalidateQueries({ queryKey: ['transactions'] })
+
+    if (debtId) {
+      try {
+        const updated = await supabaseApi.debts.getOne(debtId)
+        setSelectedDebt(updated)
+      } catch {
+        // история обновится через invalidate
+      }
+    }
+
+    await refetch()
+  }
+
+  const handleViewDebt = async (debt: Debt) => {
+    try {
+      const full = await supabaseApi.debts.getOne(debt.id)
+      setSelectedDebt(full)
+      setShowDetailModal(true)
+    } catch {
+      toast.error('Не удалось загрузить детали долга')
+    }
+  }
+
+  const openEntryForm = (mode: DebtEntryMode, payment: DebtPayment | null = null) => {
+    setEntryMode(mode)
+    setEditingPayment(payment)
+    setShowEntryForm(true)
+  }
+
+  const handleEditPayment = (payment: DebtPayment) => {
+    openEntryForm(payment.entryType === 'increase' ? 'increase' : 'repayment', payment)
+  }
+
+  const handleDeletePayment = async (payment: DebtPayment) => {
+    if (!selectedDebt) return
+
+    if (!window.confirm('Удалить эту операцию? Связанная транзакция в бюджете тоже будет удалена.')) {
+      return
+    }
+
+    try {
+      await supabaseApi.debts.deletePayment(payment.id)
+      toast.success('Операция удалена')
+      await refreshDebtData(selectedDebt.id)
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error) || 'Не удалось удалить операцию')
+    }
+  }
+
+  const handleEntrySuccess = async () => {
+    await refreshDebtData(selectedDebt?.id)
+    setEditingPayment(null)
+  }
 
   if (isLoading) {
     return (
@@ -192,7 +267,7 @@ const ContactDetailPage: React.FC = () => {
                 <button
                   key={debt.id}
                   type="button"
-                  onClick={() => setSelectedDebt(debt)}
+                  onClick={() => void handleViewDebt(debt)}
                   className={cn(
                     'w-full text-left rounded-xl border p-4 transition-shadow hover:shadow-md',
                     'bg-white dark:bg-gray-900',
@@ -242,7 +317,7 @@ const ContactDetailPage: React.FC = () => {
                   </div>
                   {(debt.payments?.length ?? 0) > 0 && (
                     <p className="text-xs text-gray-400 mt-2">
-                      Платежей: {debt.payments!.length}
+                      Операций: {debt.payments!.length}
                     </p>
                   )}
                 </button>
@@ -255,46 +330,82 @@ const ContactDetailPage: React.FC = () => {
       <div>
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
           <Receipt className={ICON_16} />
-          Все платежи ({payments.length})
+          Все операции ({payments.length})
         </h2>
 
         {payments.length === 0 ? (
           <Card className="text-center py-8 text-gray-500">
-            Платежей пока нет
+            Операций пока нет
           </Card>
         ) : (
           <div className="space-y-2">
-            {payments.map((payment) => (
-              <div
-                key={payment.id}
-                className="flex items-center justify-between gap-3 p-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium text-gray-900 dark:text-gray-100">
-                    {formatCurrency(Number(payment.amount), payment.currency)}
-                  </p>
-                  <p className="text-sm text-gray-500 truncate">
-                    {payment.debtType === 'iOwe' ? 'Погашение долга' : 'Возврат долга'}
-                    {payment.debtPurpose ? ` · ${payment.debtPurpose}` : ''}
-                  </p>
-                  {payment.note && (
-                    <p className="text-sm text-gray-400 mt-0.5">{payment.note}</p>
+            {payments.map((payment) => {
+              const isIncrease = payment.entryType === 'increase'
+
+              return (
+                <div
+                  key={payment.id}
+                  className={cn(
+                    'flex items-center justify-between gap-3 p-4 rounded-xl border',
+                    isIncrease
+                      ? 'border-amber-100 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20'
+                      : 'border-gray-100 bg-gray-50/50 dark:border-gray-800 dark:bg-gray-800/30'
                   )}
+                >
+                  <div className="min-w-0">
+                    <p className={cn(
+                      'font-medium',
+                      isIncrease ? 'text-amber-800 dark:text-amber-300' : 'text-gray-900 dark:text-gray-100'
+                    )}>
+                      {isIncrease ? '+' : '−'}
+                      {formatCurrency(Number(payment.amount), payment.currency)}
+                    </p>
+                    <p className="text-sm text-gray-500 truncate">
+                      {paymentEntryLabel(payment, payment.debtType)}
+                      {payment.debtPurpose ? ` · ${payment.debtPurpose}` : ''}
+                    </p>
+                    {payment.note && (
+                      <p className="text-sm text-gray-400 mt-0.5">{payment.note}</p>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-400 shrink-0">
+                    {format(new Date(payment.date), 'dd MMM yyyy', { locale: ru })}
+                  </p>
                 </div>
-                <p className="text-sm text-gray-400 shrink-0">
-                  {format(new Date(payment.date), 'dd MMM yyyy', { locale: ru })}
-                </p>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
 
-      <DebtDetailModal
-        isOpen={Boolean(selectedDebt)}
-        onClose={() => setSelectedDebt(null)}
-        debt={selectedDebt}
-      />
+      {selectedDebt && (
+        <>
+          <DebtDetailModal
+            isOpen={showDetailModal}
+            onClose={() => {
+              setShowDetailModal(false)
+              setSelectedDebt(null)
+            }}
+            debt={selectedDebt}
+            onRepay={() => openEntryForm('repayment')}
+            onIncrease={() => openEntryForm('increase')}
+            onEditPayment={handleEditPayment}
+            onDeletePayment={(payment) => void handleDeletePayment(payment)}
+          />
+
+          <DebtPaymentForm
+            isOpen={showEntryForm}
+            onClose={() => {
+              setShowEntryForm(false)
+              setEditingPayment(null)
+            }}
+            onSuccess={() => void handleEntrySuccess()}
+            debt={selectedDebt}
+            mode={entryMode}
+            payment={editingPayment}
+          />
+        </>
+      )}
     </div>
   )
 }

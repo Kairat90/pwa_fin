@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { Plus, RefreshCw } from 'lucide-react'
 import { supabaseApi, getErrorMessage } from '../api/supabase'
-import { Debt } from '../types'
+import { Debt, DebtEntryMode, DebtPayment } from '../types'
 import { DebtCard } from '../components/debts/DebtCard'
 import { DebtForm } from '../components/debts/DebtForm'
 import { DebtPaymentForm } from '../components/debts/DebtPaymentForm'
@@ -15,10 +15,12 @@ import { cn } from '../utils/cn'
 
 const DebtsPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false)
-  const [showPaymentForm, setShowPaymentForm] = useState(false)
+  const [showEntryForm, setShowEntryForm] = useState(false)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [editingDebt, setEditingDebt] = useState<Debt | null>(null)
   const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null)
+  const [entryMode, setEntryMode] = useState<DebtEntryMode>('repayment')
+  const [editingPayment, setEditingPayment] = useState<DebtPayment | null>(null)
   const [filterType, setFilterType] = useState<'all' | 'iOwe' | 'owedToMe'>('all')
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'overdue' | 'settled' | 'writtenOff'>('active')
   const queryClient = useQueryClient()
@@ -63,14 +65,28 @@ const DebtsPage: React.FC = () => {
     }
   })
 
+  const refreshDebtData = async (debtId?: string) => {
+    queryClient.invalidateQueries({ queryKey: ['debts'] })
+    queryClient.invalidateQueries({ queryKey: ['debtStats'] })
+    queryClient.invalidateQueries({ queryKey: ['accounts'] })
+    queryClient.invalidateQueries({ queryKey: ['transactions'] })
+    queryClient.invalidateQueries({ queryKey: ['contacts'] })
+
+    if (debtId) {
+      try {
+        const updated = await supabaseApi.debts.getOne(debtId)
+        setSelectedDebt(updated)
+      } catch {
+        // список обновится через invalidate
+      }
+    }
+
+    await refetch()
+  }
+
   const handleEdit = (debt: Debt) => {
     setEditingDebt(debt)
     setShowForm(true)
-  }
-
-  const handleAddPayment = (debt: Debt) => {
-    setSelectedDebt(debt)
-    setShowPaymentForm(true)
   }
 
   const handleViewDetails = async (debt: Debt) => {
@@ -83,6 +99,32 @@ const DebtsPage: React.FC = () => {
     }
   }
 
+  const openEntryForm = (mode: DebtEntryMode, payment: DebtPayment | null = null) => {
+    setEntryMode(mode)
+    setEditingPayment(payment)
+    setShowEntryForm(true)
+  }
+
+  const handleEditPayment = (payment: DebtPayment) => {
+    openEntryForm(payment.entryType === 'increase' ? 'increase' : 'repayment', payment)
+  }
+
+  const handleDeletePayment = async (payment: DebtPayment) => {
+    if (!selectedDebt) return
+
+    if (!window.confirm('Удалить эту операцию? Связанная транзакция в бюджете тоже будет удалена.')) {
+      return
+    }
+
+    try {
+      await supabaseApi.debts.deletePayment(payment.id)
+      toast.success('Операция удалена')
+      await refreshDebtData(selectedDebt.id)
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error) || 'Не удалось удалить операцию')
+    }
+  }
+
   const handleWriteOff = (id: string) => {
     if (window.confirm('Списать этот долг? Операцию нельзя отменить.')) {
       writeOffMutation.mutate(id)
@@ -90,21 +132,13 @@ const DebtsPage: React.FC = () => {
   }
 
   const handleFormSuccess = () => {
-    queryClient.invalidateQueries({ queryKey: ['debts'] })
-    queryClient.invalidateQueries({ queryKey: ['debtStats'] })
-    queryClient.invalidateQueries({ queryKey: ['accounts'] })
-    queryClient.invalidateQueries({ queryKey: ['transactions'] })
-    queryClient.invalidateQueries({ queryKey: ['contacts'] })
+    void refreshDebtData()
     setEditingDebt(null)
   }
 
-  const handlePaymentSuccess = () => {
-    queryClient.invalidateQueries({ queryKey: ['debts'] })
-    queryClient.invalidateQueries({ queryKey: ['debtStats'] })
-    queryClient.invalidateQueries({ queryKey: ['accounts'] })
-    queryClient.invalidateQueries({ queryKey: ['transactions'] })
-    setSelectedDebt(null)
-    refetch()
+  const handleEntrySuccess = async () => {
+    await refreshDebtData(selectedDebt?.id)
+    setEditingPayment(null)
   }
 
   if (isLoading) {
@@ -121,7 +155,7 @@ const DebtsPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Долги</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Долги</h1>
           <p className="text-gray-500 text-sm">{debtList.length} долгов</p>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -150,15 +184,15 @@ const DebtsPage: React.FC = () => {
 
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-xl border p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-xl border dark:border-gray-800 p-4">
             <p className="text-sm text-gray-500">Мне должны</p>
             <p className="text-xl font-bold text-green-600">{formatCurrency(stats.totalOwedToMe)}</p>
           </div>
-          <div className="bg-white rounded-xl border p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-xl border dark:border-gray-800 p-4">
             <p className="text-sm text-gray-500">Я должен</p>
             <p className="text-xl font-bold text-red-600">{formatCurrency(stats.totalIOwe)}</p>
           </div>
-          <div className="bg-white rounded-xl border p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-xl border dark:border-gray-800 p-4">
             <p className="text-sm text-gray-500">Чистая позиция</p>
             <p className={cn(
               'text-xl font-bold',
@@ -167,7 +201,7 @@ const DebtsPage: React.FC = () => {
               {formatCurrency(stats.netPosition)}
             </p>
           </div>
-          <div className="bg-white rounded-xl border p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-xl border dark:border-gray-800 p-4">
             <p className="text-sm text-gray-500">Просрочено</p>
             <p className="text-xl font-bold text-red-600">{stats.overdueCount}</p>
           </div>
@@ -175,7 +209,7 @@ const DebtsPage: React.FC = () => {
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex bg-gray-100 rounded-lg p-1">
+        <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
           {(['all', 'owedToMe', 'iOwe'] as const).map((type) => (
             <button
               key={type}
@@ -184,15 +218,15 @@ const DebtsPage: React.FC = () => {
               className={cn(
                 'px-3 py-1.5 text-sm rounded-lg transition-colors',
                 filterType === type
-                  ? 'bg-white shadow-sm text-gray-900'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
               )}
             >
               {type === 'all' ? 'Все' : type === 'owedToMe' ? '💰 Мне должны' : '💳 Я должен'}
             </button>
           ))}
         </div>
-        <div className="flex bg-gray-100 rounded-lg p-1 flex-wrap">
+        <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1 flex-wrap">
           {(['all', 'active', 'overdue', 'settled', 'writtenOff'] as const).map((status) => (
             <button
               key={status}
@@ -201,8 +235,8 @@ const DebtsPage: React.FC = () => {
               className={cn(
                 'px-3 py-1.5 text-sm rounded-lg transition-colors',
                 filterStatus === status
-                  ? 'bg-white shadow-sm text-gray-900'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
               )}
             >
               {status === 'all' ? 'Все'
@@ -229,7 +263,6 @@ const DebtsPage: React.FC = () => {
               debt={debt}
               onEdit={handleEdit}
               onDelete={handleWriteOff}
-              onAddPayment={handleAddPayment}
               onViewDetails={handleViewDetails}
             />
           ))}
@@ -248,15 +281,6 @@ const DebtsPage: React.FC = () => {
 
       {selectedDebt && (
         <>
-          <DebtPaymentForm
-            isOpen={showPaymentForm}
-            onClose={() => {
-              setShowPaymentForm(false)
-            }}
-            onSuccess={handlePaymentSuccess}
-            debt={selectedDebt}
-          />
-
           <DebtDetailModal
             isOpen={showDetailModal}
             onClose={() => {
@@ -264,6 +288,22 @@ const DebtsPage: React.FC = () => {
               setSelectedDebt(null)
             }}
             debt={selectedDebt}
+            onRepay={() => openEntryForm('repayment')}
+            onIncrease={() => openEntryForm('increase')}
+            onEditPayment={handleEditPayment}
+            onDeletePayment={(payment) => void handleDeletePayment(payment)}
+          />
+
+          <DebtPaymentForm
+            isOpen={showEntryForm}
+            onClose={() => {
+              setShowEntryForm(false)
+              setEditingPayment(null)
+            }}
+            onSuccess={() => void handleEntrySuccess()}
+            debt={selectedDebt}
+            mode={entryMode}
+            payment={editingPayment}
           />
         </>
       )}
