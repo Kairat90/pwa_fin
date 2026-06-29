@@ -1,6 +1,4 @@
 import React from 'react'
-import { format, differenceInDays } from 'date-fns'
-import { ru } from 'date-fns/locale'
 import { Edit2, Trash2, Calendar, AlertCircle, CheckCircle } from 'lucide-react'
 import { Debt } from '../../types'
 import { formatCurrency } from '../../utils/currency'
@@ -15,12 +13,13 @@ interface DebtCardProps {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  active: { label: 'Активен', color: 'bg-blue-100 text-blue-700', icon: <Calendar className={ICON_16} /> },
-  overdue: { label: 'Просрочен', color: 'bg-red-100 text-red-700', icon: <AlertCircle className={ICON_16} /> },
-  settled: { label: 'Погашен', color: 'bg-green-100 text-green-700', icon: <CheckCircle className={ICON_16} /> },
-  writtenOff: { label: 'Списан', color: 'bg-gray-100 text-gray-600', icon: <AlertCircle className={ICON_16} /> }
+  active: { label: 'Активен', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300', icon: <Calendar className={ICON_16} /> },
+  overdue: { label: 'Просрочен', color: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300', icon: <AlertCircle className={ICON_16} /> },
+  settled: { label: 'Погашен', color: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300', icon: <CheckCircle className={ICON_16} /> },
+  writtenOff: { label: 'Списан', color: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400', icon: <AlertCircle className={ICON_16} /> }
 }
 
+/** Компактная карточка долга в общем списке */
 export const DebtCard: React.FC<DebtCardProps> = ({
   debt,
   onEdit,
@@ -29,14 +28,13 @@ export const DebtCard: React.FC<DebtCardProps> = ({
 }) => {
   const status = STATUS_LABELS[debt.status] || STATUS_LABELS.active
   const remainingAmount = debt.remainingAmount ?? Number(debt.amount)
-  const paidAmount = Number(debt.amount) - remainingAmount
-  const progress = Number(debt.amount) > 0 ? (paidAmount / Number(debt.amount)) * 100 : 0
   const isOverdue = debt.status === 'overdue'
+  const isSettled = remainingAmount <= 0 || debt.status === 'settled'
 
   return (
     <div
       className={cn(
-        'bg-white dark:bg-gray-900 rounded-xl border dark:border-gray-800 p-4 shadow-sm hover:shadow-md transition-all cursor-pointer',
+        'bg-white dark:bg-gray-900 rounded-xl border dark:border-gray-800 px-3 py-2.5 shadow-sm hover:shadow-md transition-all cursor-pointer',
         isOverdue && 'border-red-200 bg-red-50/30 dark:border-red-900/40'
       )}
       onClick={() => onViewDetails(debt)}
@@ -44,78 +42,40 @@ export const DebtCard: React.FC<DebtCardProps> = ({
       tabIndex={0}
       onKeyDown={(e) => e.key === 'Enter' && onViewDetails(debt)}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3">
-            <div className={cn(EMOJI_BOX_16, 'rounded-full bg-gray-100 dark:bg-gray-800')}>
-              {debt.type === 'iOwe' ? '💳' : '💰'}
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                  {debt.contact?.name || 'Контакт удален'}
-                </h3>
-                <span className={cn('text-xs px-2 py-0.5 rounded-full flex items-center gap-1', status.color)}>
-                  {status.icon}
-                  {status.label}
-                </span>
-                <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-full">
-                  {debt.type === 'iOwe' ? 'Я должен' : 'Мне должны'}
-                </span>
-              </div>
-              {debt.purpose && (
-                <p className="text-sm text-gray-500 truncate">{debt.purpose}</p>
-              )}
-            </div>
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-gray-500">Сумма</p>
-              <p className="font-bold text-gray-900 dark:text-gray-100">
-                {formatCurrency(Number(debt.amount), debt.currency)}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Остаток</p>
-              <p className={cn('font-bold', remainingAmount > 0 ? 'text-red-600' : 'text-green-600')}>
-                {formatCurrency(remainingAmount, debt.currency)}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-2">
-            <div className="flex items-center justify-between text-xs text-gray-500">
-              <span>Погашено</span>
-              <span>{progress.toFixed(0)}%</span>
-            </div>
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1">
-              <div
-                className={cn(
-                  'h-1.5 rounded-full transition-all duration-500',
-                  progress >= 100 ? 'bg-green-500' : 'bg-primary-500'
-                )}
-                style={{ width: `${Math.min(progress, 100)}%` }}
-              />
-            </div>
-          </div>
-
-          {debt.dueDate && (
-            <div className="mt-2 flex items-center gap-1 text-sm">
-              <Calendar className={cn(ICON_16, 'text-gray-400')} />
-              <span className={cn(isOverdue ? 'text-red-600 font-medium' : 'text-gray-500')}>
-                {isOverdue ? 'Просрочен' : 'Срок возврата'}: {format(new Date(debt.dueDate), 'dd MMM yyyy', { locale: ru })}
-                {isOverdue && ` (${differenceInDays(new Date(), new Date(debt.dueDate))} дн. назад)`}
-              </span>
-            </div>
-          )}
+      <div className="flex items-center gap-2 sm:gap-3">
+        <div className={cn(EMOJI_BOX_16, 'rounded-full bg-gray-100 dark:bg-gray-800 shrink-0')}>
+          {debt.type === 'iOwe' ? '💳' : '💰'}
         </div>
 
-        <div className="flex items-center gap-1 ml-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+        <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+          <h3 className="font-medium text-gray-900 dark:text-gray-100 truncate shrink-0 max-w-[40%] sm:max-w-none">
+            {debt.contact?.name || 'Контакт удалён'}
+          </h3>
+
+          <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+            <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-full whitespace-nowrap">
+              {debt.type === 'iOwe' ? 'Я должен' : 'Мне должны'}
+            </span>
+            <span className={cn('text-xs px-2 py-0.5 rounded-full flex items-center gap-1 whitespace-nowrap', status.color)}>
+              {status.icon}
+              {status.label}
+            </span>
+          </div>
+        </div>
+
+        <p className={cn(
+          'font-semibold text-sm sm:text-base shrink-0 tabular-nums',
+          isSettled ? 'text-green-600' : 'text-red-600'
+        )}>
+          {formatCurrency(remainingAmount, debt.currency)}
+        </p>
+
+        <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
           <button
             type="button"
             onClick={() => onEdit(debt)}
             className="p-1.5 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors"
+            title="Редактировать"
           >
             <Edit2 className={ICON_16} />
           </button>

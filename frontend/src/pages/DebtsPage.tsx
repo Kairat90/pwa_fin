@@ -268,7 +268,7 @@ const DebtsPage: React.FC = () => {
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-2">
           {debtList.map((debt) => (
             <DebtCard
               key={debt.id}
