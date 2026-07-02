@@ -195,28 +195,68 @@ const DebtsPage: React.FC = () => {
       </div>
 
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white dark:bg-gray-900 rounded-xl border dark:border-gray-800 p-4">
-            <p className="text-sm text-gray-500">Мне должны</p>
-            <p className="text-xl font-bold text-green-600">{formatCurrency(stats.totalOwedToMe)}</p>
-          </div>
-          <div className="bg-white dark:bg-gray-900 rounded-xl border dark:border-gray-800 p-4">
-            <p className="text-sm text-gray-500">Я должен</p>
-            <p className="text-xl font-bold text-red-600">{formatCurrency(stats.totalIOwe)}</p>
-          </div>
-          <div className="bg-white dark:bg-gray-900 rounded-xl border dark:border-gray-800 p-4">
-            <p className="text-sm text-gray-500">Чистая позиция</p>
-            <p className={cn(
-              'text-xl font-bold',
-              stats.netPosition >= 0 ? 'text-green-600' : 'text-red-600'
-            )}>
-              {formatCurrency(stats.netPosition)}
-            </p>
-          </div>
-          <div className="bg-white dark:bg-gray-900 rounded-xl border dark:border-gray-800 p-4">
-            <p className="text-sm text-gray-500">Просрочено</p>
-            <p className="text-xl font-bold text-red-600">{stats.overdueCount}</p>
-          </div>
+        <div className="space-y-3">
+          {stats.byCurrency.length <= 1 ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white dark:bg-gray-900 rounded-xl border dark:border-gray-800 p-4">
+                <p className="text-sm text-gray-500">Мне должны</p>
+                <p className="text-xl font-bold text-green-600">
+                  {formatCurrency(stats.totalOwedToMe, stats.byCurrency[0]?.currency)}
+                </p>
+              </div>
+              <div className="bg-white dark:bg-gray-900 rounded-xl border dark:border-gray-800 p-4">
+                <p className="text-sm text-gray-500">Я должен</p>
+                <p className="text-xl font-bold text-red-600">
+                  {formatCurrency(stats.totalIOwe, stats.byCurrency[0]?.currency)}
+                </p>
+              </div>
+              <div className="bg-white dark:bg-gray-900 rounded-xl border dark:border-gray-800 p-4">
+                <p className="text-sm text-gray-500">Чистая позиция</p>
+                <p className={cn(
+                  'text-xl font-bold',
+                  stats.netPosition >= 0 ? 'text-green-600' : 'text-red-600'
+                )}>
+                  {formatCurrency(stats.netPosition, stats.byCurrency[0]?.currency)}
+                </p>
+              </div>
+              <div className="bg-white dark:bg-gray-900 rounded-xl border dark:border-gray-800 p-4">
+                <p className="text-sm text-gray-500">Просрочено</p>
+                <p className="text-xl font-bold text-red-600">{stats.overdueCount}</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              {stats.byCurrency.map((row) => (
+                <div key={row.currency} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="bg-white dark:bg-gray-900 rounded-xl border dark:border-gray-800 p-4">
+                    <p className="text-sm text-gray-500">Мне должны · {row.currency}</p>
+                    <p className="text-xl font-bold text-green-600">
+                      {formatCurrency(row.totalOwedToMe, row.currency)}
+                    </p>
+                  </div>
+                  <div className="bg-white dark:bg-gray-900 rounded-xl border dark:border-gray-800 p-4">
+                    <p className="text-sm text-gray-500">Я должен · {row.currency}</p>
+                    <p className="text-xl font-bold text-red-600">
+                      {formatCurrency(row.totalIOwe, row.currency)}
+                    </p>
+                  </div>
+                  <div className="bg-white dark:bg-gray-900 rounded-xl border dark:border-gray-800 p-4">
+                    <p className="text-sm text-gray-500">Чистая позиция · {row.currency}</p>
+                    <p className={cn(
+                      'text-xl font-bold',
+                      row.netPosition >= 0 ? 'text-green-600' : 'text-red-600'
+                    )}>
+                      {formatCurrency(row.netPosition, row.currency)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              <div className="bg-white dark:bg-gray-900 rounded-xl border dark:border-gray-800 p-4 max-w-xs">
+                <p className="text-sm text-gray-500">Просрочено</p>
+                <p className="text-xl font-bold text-red-600">{stats.overdueCount}</p>
+              </div>
+            </>
+          )}
         </div>
       )}
 

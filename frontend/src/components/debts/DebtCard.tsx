@@ -30,6 +30,13 @@ export const DebtCard: React.FC<DebtCardProps> = ({
   const remainingAmount = debt.remainingAmount ?? Number(debt.amount)
   const isOverdue = debt.status === 'overdue'
   const isSettled = remainingAmount <= 0 || debt.status === 'settled'
+  const isOwedToMe = debt.type === 'owedToMe'
+
+  const amountColor = isSettled
+    ? 'text-green-600 dark:text-green-400'
+    : isOwedToMe
+      ? 'text-green-600 dark:text-green-400'
+      : 'text-red-600 dark:text-red-400'
 
   return (
     <div
@@ -63,10 +70,7 @@ export const DebtCard: React.FC<DebtCardProps> = ({
           </div>
         </div>
 
-        <p className={cn(
-          'font-semibold text-sm sm:text-base shrink-0 tabular-nums',
-          isSettled ? 'text-green-600' : 'text-red-600'
-        )}>
+        <p className={cn('font-semibold text-sm sm:text-base shrink-0 tabular-nums', amountColor)}>
           {formatCurrency(remainingAmount, debt.currency)}
         </p>
 

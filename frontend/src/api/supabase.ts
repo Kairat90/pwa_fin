@@ -18,6 +18,7 @@ import { buildIlikeOrFilter, buildUuidEqOrFilter } from '../utils/postgrestFilte
 import { restoreBackupData, validateBackup } from '../utils/restoreBackup'
 import { addDays, endOfDay } from 'date-fns'
 import { buildContactHistory, ContactHistoryData, ContactCurrencySummary, ContactPaymentEntry } from '../utils/contactHistory'
+import { computeDebtStats, type DebtStats } from '../utils/debtStats'
 
 const AUTH_CODE_MESSAGES: Record<string, string> = {
   signup_disabled: 'Регистрация отключена. Включите Email sign ups в Supabase → Authentication → Providers',
@@ -193,14 +194,7 @@ export type DebtPaymentData = {
   entryType?: DebtEntryMode
 }
 
-export type DebtStats = {
-  totalIOwe: number
-  totalOwedToMe: number
-  netPosition: number
-  overdueCount: number
-  activeCount: number
-  totalDebts: number
-}
+export type { DebtStats } from '../utils/debtStats'
 
 export type ContactHistory = {
   contact: Contact
@@ -974,9 +968,14 @@ export const supabaseApi = {
     },
 
     getStats: async (): Promise<DebtStats> => {
-      const { data, error } = await supabase.rpc('get_debt_stats')
+      const { data, error } = await supabase
+        .from('debts')
+        .select('*, payments:debt_payments(*)')
+        .in('status', ['active', 'overdue'])
+
       if (error) throw new Error(error.message)
-      return mapKeys<DebtStats>(data)
+
+      return computeDebtStats(await enrichDebts(mapKeys<Record<string, unknown>[]>(data ?? [])))
     },
 
     checkOverdue: async (): Promise<{ message: string; count: number }> => {
