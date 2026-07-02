@@ -12,6 +12,7 @@ import { cn } from '../../utils/cn'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
 import { LoadingSpinner } from '../common/LoadingSpinner'
+import { ScheduledExecuteModal } from '../scheduled/ScheduledExecuteModal'
 import { ICON_16 } from '../../utils/iconSize'
 
 const FREQUENCY_SHORT: Record<string, string> = {
@@ -25,14 +26,12 @@ const FREQUENCY_SHORT: Record<string, string> = {
 
 interface UpcomingScheduledRowProps {
   item: ScheduledTransaction
-  executing: boolean
-  onExecute: (id: string) => void
+  onExecute: (item: ScheduledTransaction) => void
 }
 
 /** Строка предстоящей операции */
 const UpcomingScheduledRow: React.FC<UpcomingScheduledRowProps> = ({
   item,
-  executing,
   onExecute
 }) => {
   const daysUntil = differenceInDays(new Date(item.nextExecutionDate), new Date())
@@ -107,8 +106,7 @@ const UpcomingScheduledRow: React.FC<UpcomingScheduledRowProps> = ({
           type="button"
           size="sm"
           variant="outline"
-          loading={executing}
-          onClick={() => onExecute(item.id)}
+          onClick={() => onExecute(item)}
           className="whitespace-nowrap"
         >
           Выполнить сейчас
@@ -122,35 +120,20 @@ const UpcomingScheduledRow: React.FC<UpcomingScheduledRowProps> = ({
 export const UpcomingScheduledBlock: React.FC = () => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [executingId, setExecutingId] = useState<string | null>(null)
+  const [executeItem, setExecuteItem] = useState<ScheduledTransaction | null>(null)
 
   const { data: items, isLoading } = useQuery({
     queryKey: ['scheduled', 'upcoming', 7],
     queryFn: () => supabaseApi.scheduled.getUpcoming(7)
   })
 
-  const executeMutation = useMutation({
-    mutationFn: (id: string) => supabaseApi.scheduled.execute(id),
-    onSuccess: () => {
-      toast.success('Операция выполнена')
-      queryClient.invalidateQueries({ queryKey: ['scheduled'] })
-      queryClient.invalidateQueries({ queryKey: ['transactions'] })
-      queryClient.invalidateQueries({ queryKey: ['accounts'] })
-      queryClient.invalidateQueries({ queryKey: ['summary'] })
-      queryClient.invalidateQueries({ queryKey: ['totalBalance'] })
-      queryClient.invalidateQueries({ queryKey: ['topTransactions'] })
-    },
-    onError: (error: unknown) => {
-      toast.error(getErrorMessage(error) || 'Не удалось выполнить операцию')
-    },
-    onSettled: () => {
-      setExecutingId(null)
-    }
-  })
-
-  const handleExecute = (id: string) => {
-    setExecutingId(id)
-    executeMutation.mutate(id)
+  const invalidateAfterExecute = () => {
+    queryClient.invalidateQueries({ queryKey: ['scheduled'] })
+    queryClient.invalidateQueries({ queryKey: ['transactions'] })
+    queryClient.invalidateQueries({ queryKey: ['accounts'] })
+    queryClient.invalidateQueries({ queryKey: ['summary'] })
+    queryClient.invalidateQueries({ queryKey: ['totalBalance'] })
+    queryClient.invalidateQueries({ queryKey: ['topTransactions'] })
   }
 
   const upcoming = items ?? []
@@ -216,12 +199,18 @@ export const UpcomingScheduledBlock: React.FC = () => {
             <UpcomingScheduledRow
               key={item.id}
               item={item}
-              executing={executingId === item.id}
-              onExecute={handleExecute}
+              onExecute={setExecuteItem}
             />
           ))}
         </div>
       )}
+
+      <ScheduledExecuteModal
+        isOpen={Boolean(executeItem)}
+        onClose={() => setExecuteItem(null)}
+        onSuccess={invalidateAfterExecute}
+        scheduled={executeItem}
+      />
     </Card>
   )
 }

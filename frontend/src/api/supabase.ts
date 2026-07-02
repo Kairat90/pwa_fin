@@ -171,6 +171,12 @@ export type ScheduledCreateData = Omit<
   isActive?: boolean
 }
 
+export type ScheduledExecuteData = {
+  amount?: number
+  date?: string
+  note?: string
+}
+
 export type DebtCreateData = {
   contactId: string
   accountId?: string
@@ -770,8 +776,13 @@ export const supabaseApi = {
       return mapKeys<ScheduledTransaction>(data)
     },
 
-    execute: async (id: string): Promise<unknown> => {
-      const { data, error } = await supabase.rpc('execute_scheduled_now', { scheduled_id: id })
+    execute: async (id: string, overrides?: ScheduledExecuteData): Promise<unknown> => {
+      const { data, error } = await supabase.rpc('execute_scheduled_now', {
+        scheduled_id: id,
+        override_amount: overrides?.amount ?? null,
+        override_date: overrides?.date ?? null,
+        override_note: overrides?.note ?? null
+      })
       if (error) throw new Error(error.message)
       return mapKeys(data)
     },
