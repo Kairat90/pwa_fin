@@ -5,6 +5,7 @@ import { z } from 'zod'
 import toast from 'react-hot-toast'
 import { Account } from '../../types'
 import { supabaseApi, getErrorMessage } from '../../api/supabase'
+import { useAuth } from '../../context/AuthContext'
 import { DEFAULT_CURRENCY } from '../../utils/currency'
 import { cn } from '../../utils/cn'
 import { Button } from '../ui/Button'
@@ -46,6 +47,7 @@ export const AccountForm: React.FC<AccountFormProps> = ({
 }) => {
   const [loading, setLoading] = useState(false)
   const [selectedColor, setSelectedColor] = useState(account?.color || '#4F46E5')
+  const { defaultAccountId, refreshProfile, setUserProfile } = useAuth()
 
   const {
     register,
@@ -106,8 +108,18 @@ export const AccountForm: React.FC<AccountFormProps> = ({
         await supabaseApi.accounts.update(account.id, payload)
         toast.success('Счет обновлен')
       } else {
-        await supabaseApi.accounts.create(payload)
+        const created = await supabaseApi.accounts.create(payload)
         toast.success('Счет создан')
+
+        if (!defaultAccountId) {
+          await supabaseApi.accounts.setDefault(created.id)
+          const profile = await supabaseApi.auth.fetchProfile()
+          if (profile) {
+            setUserProfile(profile)
+          } else {
+            await refreshProfile()
+          }
+        }
       }
       onSuccess()
       onClose()

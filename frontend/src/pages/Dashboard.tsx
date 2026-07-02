@@ -19,14 +19,15 @@ import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { cn } from '../utils/cn'
-import { formatCurrency } from '../utils/currency'
+import { formatCurrency, normalizeCurrency } from '../utils/currency'
+import { resolveDefaultAccount } from '../utils/defaultAccount'
 
 type Period = 'month' | 'week' | 'today'
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { defaultCurrency } = useAuth()
+  const { defaultCurrency, defaultAccountId } = useAuth()
   const [period, setPeriod] = useState<Period>('month')
   const [startDate, setStartDate] = useState(startOfMonth(new Date()))
   const [endDate, setEndDate] = useState(endOfMonth(new Date()))
@@ -51,19 +52,22 @@ const Dashboard: React.FC = () => {
     queryFn: () => supabaseApi.reports.getCategoryBreakdown(startStr, endStr, 'expense')
   })
 
+  const { data: accounts } = useQuery({
+    queryKey: ['accounts'],
+    queryFn: () => supabaseApi.accounts.getAll()
+  })
+
+  const defaultAccount = resolveDefaultAccount(accounts ?? [], defaultAccountId, defaultCurrency)
+  const defaultAccountIdForQueries = defaultAccount?.id
+
   const { data: balanceHistory } = useQuery({
-    queryKey: ['balanceHistory', startStr, endStr],
-    queryFn: () => supabaseApi.reports.getBalanceHistory(startStr, endStr)
+    queryKey: ['balanceHistory', startStr, endStr, defaultAccountIdForQueries],
+    queryFn: () => supabaseApi.reports.getBalanceHistory(startStr, endStr, defaultAccountIdForQueries)
   })
 
   const { data: topTransactions } = useQuery({
     queryKey: ['topTransactions', startStr, endStr],
     queryFn: () => supabaseApi.reports.getTopTransactions(startStr, endStr, 5)
-  })
-
-  const { data: totalBalance } = useQuery({
-    queryKey: ['totalBalance'],
-    queryFn: () => supabaseApi.accounts.getTotalBalance()
   })
 
   const handlePeriodChange = (newPeriod: Period) => {
@@ -143,10 +147,29 @@ const Dashboard: React.FC = () => {
       </div>
 
       <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-2xl p-6 text-white">
-        <p className="text-sm opacity-90">Общий баланс</p>
-        <p className="text-3xl font-bold mt-1">
-          {formatCurrency(totalBalance || 0, defaultCurrency)}
-        </p>
+        {defaultAccount ? (
+          <>
+            <div className="flex items-center gap-3">
+              <span className="text-3xl" aria-hidden>{defaultAccount.icon || '💰'}</span>
+              <div>
+                <p className="text-sm opacity-90">Основной счёт</p>
+                <p className="text-lg font-semibold">{defaultAccount.name}</p>
+              </div>
+            </div>
+            <p className="text-3xl font-bold mt-3">
+              {formatCurrency(Number(defaultAccount.balance ?? defaultAccount.initialBalance), defaultAccount.currency)}
+            </p>
+            <p className="text-sm opacity-80 mt-1">
+              {normalizeCurrency(defaultAccount.currency)}
+              {defaultAccountId === defaultAccount.id ? '' : ' · выбран автоматически'}
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-sm opacity-90">Основной счёт</p>
+            <p className="text-xl font-semibold mt-1">Создайте счёт для учёта</p>
+          </>
+        )}
         <div className="flex gap-4 mt-4 flex-wrap">
           <Button
             size="sm"
@@ -192,7 +215,9 @@ const Dashboard: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Динамика баланса</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Динамика баланса{defaultAccount ? `: ${defaultAccount.name}` : ''}
+          </h3>
           {balanceHistory && <BalanceChart data={balanceHistory} />}
         </Card>
 
@@ -255,6 +280,7 @@ const Dashboard: React.FC = () => {
         onClose={() => setShowForm(false)}
         onSuccess={handleFormSuccess}
         type={formType}
+        defaultAccountId={defaultAccount?.id}
       />
     </div>
   )

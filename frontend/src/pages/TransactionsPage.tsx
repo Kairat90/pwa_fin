@@ -5,7 +5,9 @@ import toast from 'react-hot-toast'
 import { Plus } from 'lucide-react'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { supabaseApi, getErrorMessage } from '../api/supabase'
+import { useAuth } from '../context/AuthContext'
 import { Transaction } from '../types'
+import { resolveDefaultAccount } from '../utils/defaultAccount'
 import { TransactionList } from '../components/transactions/TransactionList'
 import { TransactionForm } from '../components/transactions/TransactionForm'
 import { TransactionFilters, TransactionFilterValues } from '../components/transactions/TransactionFilters'
@@ -19,6 +21,7 @@ const TransactionsPage: React.FC = () => {
   const [formType, setFormType] = useState<'income' | 'expense'>('expense')
 
   const queryClient = useQueryClient()
+  const { defaultAccountId, defaultCurrency } = useAuth()
 
   const filters = {
     startDate: searchParams.get('startDate') || format(startOfMonth(new Date()), 'yyyy-MM-dd'),
@@ -45,6 +48,8 @@ const TransactionsPage: React.FC = () => {
     queryKey: ['accounts'],
     queryFn: () => supabaseApi.accounts.getAll()
   })
+
+  const defaultAccount = resolveDefaultAccount(accounts ?? [], defaultAccountId, defaultCurrency)
 
   const { data: categories } = useQuery({
     queryKey: ['categories'],
@@ -171,6 +176,7 @@ const TransactionsPage: React.FC = () => {
         type={formType}
         transaction={editingTransaction || undefined}
         repeatSource={repeatSource || undefined}
+        defaultAccountId={defaultAccount?.id}
       />
     </div>
   )

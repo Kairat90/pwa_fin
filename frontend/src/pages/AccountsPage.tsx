@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { Plus, Filter } from 'lucide-react'
 import { supabaseApi, getErrorMessage } from '../api/supabase'
+import { useAuth } from '../context/AuthContext'
 import { Account } from '../types'
 import { AccountCard } from '../components/accounts/AccountCard'
 import { AccountForm } from '../components/accounts/AccountForm'
@@ -14,6 +15,7 @@ const AccountsPage: React.FC = () => {
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
   const [showArchived, setShowArchived] = useState(false)
   const queryClient = useQueryClient()
+  const { defaultAccountId, refreshProfile, setUserProfile } = useAuth()
 
   const { data: accounts, isLoading } = useQuery({
     queryKey: ['accounts', showArchived],
@@ -22,7 +24,15 @@ const AccountsPage: React.FC = () => {
 
   const archiveMutation = useMutation({
     mutationFn: (id: string) => supabaseApi.accounts.archive(id),
-    onSuccess: () => {
+    onSuccess: async (_id, archivedId) => {
+      if (archivedId === defaultAccountId) {
+        const profile = await supabaseApi.auth.fetchProfile()
+        if (profile) {
+          setUserProfile(profile)
+        } else {
+          await refreshProfile()
+        }
+      }
       queryClient.invalidateQueries({ queryKey: ['accounts'] })
       toast.success('Счет архивирован')
     },
@@ -39,6 +49,23 @@ const AccountsPage: React.FC = () => {
     },
     onError: (error: unknown) => {
       toast.error(getErrorMessage(error) || 'Ошибка восстановления')
+    }
+  })
+
+  const setDefaultMutation = useMutation({
+    mutationFn: (id: string) => supabaseApi.accounts.setDefault(id),
+    onSuccess: async () => {
+      const profile = await supabaseApi.auth.fetchProfile()
+      if (profile) {
+        setUserProfile(profile)
+      } else {
+        await refreshProfile()
+      }
+      queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      toast.success('Основной счёт обновлён')
+    },
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error) || 'Не удалось выбрать счёт')
     }
   })
 
@@ -62,6 +89,11 @@ const AccountsPage: React.FC = () => {
 
   const activeAccounts = accounts?.filter((a) => !a.isArchived) || []
   const archivedAccounts = accounts?.filter((a) => a.isArchived) || []
+  const sortedActiveAccounts = [...activeAccounts].sort((a, b) => {
+    if (a.id === defaultAccountId) return -1
+    if (b.id === defaultAccountId) return 1
+    return 0
+  })
 
   return (
     <div className="space-y-6">
@@ -114,13 +146,15 @@ const AccountsPage: React.FC = () => {
           )
         ) : (
           activeAccounts.length > 0 ? (
-            activeAccounts.map((account) => (
+            sortedActiveAccounts.map((account) => (
               <AccountCard
                 key={account.id}
                 account={account}
+                isDefault={account.id === defaultAccountId}
                 onEdit={handleEdit}
                 onArchive={archiveMutation.mutate}
                 onUnarchive={unarchiveMutation.mutate}
+                onSetDefault={setDefaultMutation.mutate}
               />
             ))
           ) : (

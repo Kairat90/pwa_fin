@@ -279,6 +279,7 @@ export const supabaseApi = {
       email,
       name: metadata?.name as string | undefined,
       defaultCurrency: (metadata?.default_currency as string) || (metadata?.defaultCurrency as string) || 'KZT',
+      defaultAccountId: (metadata?.default_account_id as string) || null,
       createdAt: new Date().toISOString()
     }),
 
@@ -290,7 +291,7 @@ export const supabaseApi = {
 
       const { data, error } = await supabase
         .from('users')
-        .select('id, email, name, default_currency, created_at')
+        .select('id, email, name, default_currency, default_account_id, created_at')
         .eq('id', authUser.id)
         .maybeSingle()
 
@@ -302,6 +303,7 @@ export const supabaseApi = {
           email: authUser.email ?? '',
           name: authUser.user_metadata?.name as string | undefined,
           defaultCurrency: 'KZT',
+          defaultAccountId: null,
           createdAt: new Date().toISOString()
         }
       }
@@ -311,6 +313,7 @@ export const supabaseApi = {
         email: string
         name?: string
         defaultCurrency?: string
+        defaultAccountId?: string | null
         createdAt: string
       }>(data)
 
@@ -319,6 +322,7 @@ export const supabaseApi = {
         email: row.email,
         name: row.name,
         defaultCurrency: row.defaultCurrency || 'KZT',
+        defaultAccountId: row.defaultAccountId ?? null,
         createdAt: row.createdAt
       }
     },
@@ -458,6 +462,16 @@ export const supabaseApi = {
     archive: async (id: string): Promise<void> => {
       const { error } = await supabase.from('accounts').update({ is_archived: true }).eq('id', id)
       if (error) throw new Error(error.message)
+
+      const { data: { user } } = await supabase.auth.getUser()
+
+      if (user) {
+        await supabase
+          .from('users')
+          .update({ default_account_id: null })
+          .eq('id', user.id)
+          .eq('default_account_id', id)
+      }
     },
 
     unarchive: async (id: string): Promise<void> => {
@@ -469,6 +483,11 @@ export const supabaseApi = {
       const { data, error } = await supabase.rpc('get_total_balance')
       if (error) throw new Error(error.message)
       return Number(data ?? 0)
+    },
+
+    setDefault: async (accountId: string): Promise<void> => {
+      const { error } = await supabase.rpc('set_default_account', { p_account_id: accountId })
+      if (error) throw new Error(error.message)
     }
   },
 

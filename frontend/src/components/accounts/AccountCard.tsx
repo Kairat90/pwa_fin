@@ -1,5 +1,5 @@
 import React from 'react'
-import { Edit2, Archive, RotateCcw } from 'lucide-react'
+import { Archive, Edit2, RotateCcw, Star } from 'lucide-react'
 import { Account } from '../../types'
 import { formatCurrency } from '../../utils/currency'
 import { cn } from '../../utils/cn'
@@ -7,9 +7,11 @@ import { EMOJI_BOX_16, ICON_16 } from '../../utils/iconSize'
 
 interface AccountCardProps {
   account: Account
+  isDefault?: boolean
   onEdit: (account: Account) => void
   onArchive: (id: string) => void
   onUnarchive: (id: string) => void
+  onSetDefault?: (id: string) => void
 }
 
 const ACCOUNT_TYPE_LABELS: Record<string, string> = {
@@ -21,9 +23,11 @@ const ACCOUNT_TYPE_LABELS: Record<string, string> = {
 
 export const AccountCard: React.FC<AccountCardProps> = ({
   account,
+  isDefault = false,
   onEdit,
   onArchive,
-  onUnarchive
+  onUnarchive,
+  onSetDefault
 }) => {
   const balance = Number(account.balance ?? account.initialBalance)
   const initialBalance = Number(account.initialBalance)
@@ -31,27 +35,46 @@ export const AccountCard: React.FC<AccountCardProps> = ({
   return (
     <div className={cn(
       'bg-white rounded-xl border p-4 shadow-sm hover:shadow-md transition-shadow',
-      account.isArchived && 'opacity-60'
+      account.isArchived && 'opacity-60',
+      isDefault && !account.isArchived && 'border-primary-300 ring-1 ring-primary-100'
     )}>
       <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           <div
             className={EMOJI_BOX_16}
             style={{ backgroundColor: account.color || '#4F46E5' }}
           >
             {account.icon || '💰'}
           </div>
-          <div>
-            <h3 className="font-semibold text-gray-900">{account.name}</h3>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-semibold text-gray-900 truncate">{account.name}</h3>
+              {isDefault && !account.isArchived && (
+                <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide font-semibold text-primary-700 bg-primary-50 px-2 py-0.5 rounded-full">
+                  <Star className="w-3 h-3 fill-primary-500 text-primary-500" />
+                  По умолчанию
+                </span>
+              )}
+            </div>
             <p className="text-sm text-gray-500">
               {ACCOUNT_TYPE_LABELS[account.type || ''] || 'Счет'}
               {account.isArchived && ' (Архивирован)'}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           {!account.isArchived && (
             <>
+              {!isDefault && onSetDefault && (
+                <button
+                  type="button"
+                  onClick={() => onSetDefault(account.id)}
+                  className="p-1.5 text-gray-400 hover:text-amber-500 rounded-lg hover:bg-amber-50 transition-colors"
+                  title="Сделать основным"
+                >
+                  <Star className={ICON_16} />
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => onEdit(account)}
