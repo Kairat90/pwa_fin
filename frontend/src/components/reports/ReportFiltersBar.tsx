@@ -127,7 +127,7 @@ function getPeriodSummary(
   customStart: string,
   customEnd: string
 ): string {
-  if (customStart) {
+  if (period === 'custom' && customStart) {
     const end = customEnd || customStart
     return `${format(new Date(customStart), 'dd.MM.yy')} — ${format(new Date(end), 'dd.MM.yy')}`
   }
@@ -174,13 +174,17 @@ export const ReportFiltersBar: React.FC<ReportFiltersBarProps> = ({
   }
 
   const applyPreset = (preset: ReportPeriodPreset) => {
-    const dates = applyReportPreset(preset, filters)
+    if (preset === 'custom') {
+      const dates = applyReportPreset('custom', filters)
 
-    onChange({
-      ...filters,
-      ...dates,
-      accountIds: filters.accountIds
-    })
+      onChange({
+        ...filters,
+        ...dates
+      })
+    } else {
+      onChange({ ...filters, period: preset })
+    }
+
     setOpenDropdown(null)
   }
 
@@ -406,7 +410,7 @@ export function formatReportPeriodHint(
   customStart: string,
   customEnd: string
 ): string {
-  if (customStart) {
+  if (period === 'custom' && customStart) {
     const end = customEnd || customStart
     return `${format(new Date(customStart), 'dd.MM.yyyy')} — ${format(new Date(end), 'dd.MM.yyyy')}`
   }

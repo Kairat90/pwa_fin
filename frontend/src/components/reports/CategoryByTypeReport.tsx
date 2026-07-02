@@ -4,7 +4,8 @@ import { supabaseApi } from '../../api/supabase'
 import { Account } from '../../types'
 import { buildCategoryBreakdown } from '../../utils/categoryBreakdownReport'
 import { DEFAULT_CURRENCY, formatCurrency, normalizeCurrency } from '../../utils/currency'
-import { applyReportPreset, formatReportDateRange, getReportDateRange } from '../../utils/reportPeriod'
+import { format } from 'date-fns'
+import { formatReportDateRange, getReportDateRange } from '../../utils/reportPeriod'
 import { Card } from '../ui/Card'
 import { LoadingSpinner } from '../common/LoadingSpinner'
 import { CategoryHorizontalBars } from './CategoryHorizontalBars'
@@ -26,12 +27,12 @@ export function getDefaultReportFilters(accounts: Account[]): ReportFiltersState
     .filter((account) => normalizeCurrency(account.currency) === DEFAULT_CURRENCY)
     .map((account) => account.id)
 
-  const { period, customStart, customEnd } = applyReportPreset('month')
+  const today = format(new Date(), 'yyyy-MM-dd')
 
   return {
-    period,
-    customStart,
-    customEnd,
+    period: 'month',
+    customStart: today,
+    customEnd: today,
     accountIds: kztIds.length > 0 ? kztIds : active.map((account) => account.id)
   }
 }
@@ -59,7 +60,7 @@ export const CategoryByTypeReport: React.FC<CategoryByTypeReportProps> = ({ type
     }
 
     return getReportDateRange(
-      'custom',
+      filters.period,
       filters.customStart ? new Date(filters.customStart) : undefined,
       filters.customEnd ? new Date(filters.customEnd) : undefined
     )
@@ -70,7 +71,7 @@ export const CategoryByTypeReport: React.FC<CategoryByTypeReportProps> = ({ type
   const canFetch = Boolean(filters && filters.accountIds.length > 0)
 
   const { data: transactions = [], isLoading: transactionsLoading, isFetching } = useQuery({
-    queryKey: ['reportTransactions', dateFrom, dateTo, filters?.accountIds],
+    queryKey: ['reportTransactions', dateFrom, dateTo, filters?.period, filters?.accountIds],
     queryFn: () => supabaseApi.transactions.getAllInRange(dateFrom, dateTo, filters!.accountIds),
     enabled: canFetch
   })
@@ -92,7 +93,6 @@ export const CategoryByTypeReport: React.FC<CategoryByTypeReportProps> = ({ type
   const handleDateRangeChange = (customStart: string, customEnd: string) => {
     setFilters({
       ...filters!,
-      period: 'custom',
       customStart,
       customEnd
     })
@@ -141,13 +141,14 @@ export const CategoryByTypeReport: React.FC<CategoryByTypeReportProps> = ({ type
         />
       </div>
 
-      <ReportDateRangeRow
-        className="md:hidden mb-6 min-w-0"
-        period={filters.period}
-        customStart={filters.customStart}
-        customEnd={filters.customEnd}
-        onChange={handleDateRangeChange}
-      />
+      {filters.period === 'custom' && (
+        <ReportDateRangeRow
+          className="md:hidden mb-6 min-w-0"
+          customStart={filters.customStart}
+          customEnd={filters.customEnd}
+          onChange={handleDateRangeChange}
+        />
+      )}
 
       {transactionsLoading ? (
         <div className="flex items-center justify-center h-40">
