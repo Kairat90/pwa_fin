@@ -135,7 +135,7 @@ export const CategoryByTypeReport: React.FC<CategoryByTypeReportProps> = ({ type
 
       {filters.period === 'custom' && (
         <ReportCustomDateRangeRow
-          className="md:hidden mb-6"
+          className="md:hidden mb-6 min-w-0"
           customStart={filters.customStart}
           customEnd={filters.customEnd}
           onChange={(customStart, customEnd) => setFilters({ ...filters, customStart, customEnd })}
