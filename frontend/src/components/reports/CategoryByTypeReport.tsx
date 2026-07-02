@@ -9,6 +9,7 @@ import { formatReportDateRange, getReportDateRange } from '../../utils/reportPer
 import { Card } from '../ui/Card'
 import { LoadingSpinner } from '../common/LoadingSpinner'
 import { CategoryHorizontalBars } from './CategoryHorizontalBars'
+import { ReportCustomDateRangeRow } from './ReportCustomDateRangeRow'
 import {
   formatReportPeriodHint,
   ReportFiltersBar,
@@ -131,6 +132,15 @@ export const CategoryByTypeReport: React.FC<CategoryByTypeReportProps> = ({ type
           currencyLabel={DEFAULT_CURRENCY}
         />
       </div>
+
+      {filters.period === 'custom' && (
+        <ReportCustomDateRangeRow
+          className="md:hidden mb-6"
+          customStart={filters.customStart}
+          customEnd={filters.customEnd}
+          onChange={(customStart, customEnd) => setFilters({ ...filters, customStart, customEnd })}
+        />
+      )}
 
       {transactionsLoading ? (
         <div className="flex items-center justify-center h-40">

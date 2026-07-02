@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { format } from 'date-fns'
+import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { Calendar, ChevronDown, RotateCcw, Wallet } from 'lucide-react'
 import { Account } from '../../types'
 import { cn } from '../../utils/cn'
@@ -172,6 +172,20 @@ export const ReportFiltersBar: React.FC<ReportFiltersBarProps> = ({
     })
   }
 
+  const selectCustomPeriod = () => {
+    const now = new Date()
+    const monthStart = format(startOfMonth(now), 'yyyy-MM-dd')
+    const monthEnd = format(endOfMonth(now), 'yyyy-MM-dd')
+
+    onChange({
+      ...filters,
+      period: 'custom',
+      customStart: filters.customStart || monthStart,
+      customEnd: filters.customEnd || monthEnd
+    })
+    setOpenDropdown(null)
+  }
+
   const periodOptions = (
     <div className="space-y-1">
       {PERIOD_OPTIONS.map((preset) => (
@@ -179,10 +193,13 @@ export const ReportFiltersBar: React.FC<ReportFiltersBarProps> = ({
           key={preset}
           type="button"
           onClick={() => {
-            onChange({ ...filters, period: preset })
-            if (preset !== 'custom') {
-              setOpenDropdown(null)
+            if (preset === 'custom') {
+              selectCustomPeriod()
+              return
             }
+
+            onChange({ ...filters, period: preset })
+            setOpenDropdown(null)
           }}
           className={cn(
             'w-full text-left px-3 py-2 rounded-lg text-sm transition-colors',
@@ -194,32 +211,6 @@ export const ReportFiltersBar: React.FC<ReportFiltersBarProps> = ({
           {REPORT_PERIOD_LABELS[preset]}
         </button>
       ))}
-
-      {filters.period === 'custom' && (
-        <div className="pt-2 mt-2 border-t border-gray-100 dark:border-gray-800 space-y-2">
-          <div>
-            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">С</label>
-            <input
-              type="date"
-              value={filters.customStart}
-              onChange={(e) => onChange({ ...filters, customStart: e.target.value })}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">По</label>
-            <input
-              type="date"
-              value={filters.customEnd}
-              onChange={(e) => onChange({ ...filters, customEnd: e.target.value })}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 px-3 py-2 text-sm"
-            />
-          </div>
-          <Button type="button" size="sm" className="w-full" onClick={() => setOpenDropdown(null)}>
-            Готово
-          </Button>
-        </div>
-      )}
     </div>
   )
 
