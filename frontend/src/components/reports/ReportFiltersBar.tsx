@@ -5,7 +5,7 @@ import { Account } from '../../types'
 import { cn } from '../../utils/cn'
 import { normalizeCurrency } from '../../utils/currency'
 import {
-  applyReportPreset,
+  getCustomPeriodDates,
   REPORT_PERIOD_LABELS,
   ReportPeriodPreset
 } from '../../utils/reportPeriod'
@@ -175,11 +175,10 @@ export const ReportFiltersBar: React.FC<ReportFiltersBarProps> = ({
 
   const applyPreset = (preset: ReportPeriodPreset) => {
     if (preset === 'custom') {
-      const dates = applyReportPreset('custom', filters)
-
       onChange({
         ...filters,
-        ...dates
+        period: 'custom',
+        ...getCustomPeriodDates(filters)
       })
     } else {
       onChange({ ...filters, period: preset })

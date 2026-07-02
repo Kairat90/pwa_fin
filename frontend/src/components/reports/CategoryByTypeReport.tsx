@@ -4,7 +4,6 @@ import { supabaseApi } from '../../api/supabase'
 import { Account } from '../../types'
 import { buildCategoryBreakdown } from '../../utils/categoryBreakdownReport'
 import { DEFAULT_CURRENCY, formatCurrency, normalizeCurrency } from '../../utils/currency'
-import { format } from 'date-fns'
 import { formatReportDateRange, getReportDateRange } from '../../utils/reportPeriod'
 import { Card } from '../ui/Card'
 import { LoadingSpinner } from '../common/LoadingSpinner'
@@ -21,24 +20,23 @@ interface CategoryByTypeReportProps {
 }
 
 /** Начальные фильтры: текущий месяц, счета в тенге */
-export function getDefaultReportFilters(accounts: Account[]): ReportFiltersState {
+function getDefaultReportFilters(accounts: Account[]): ReportFiltersState {
   const active = accounts.filter((account) => !account.isArchived)
   const kztIds = active
     .filter((account) => normalizeCurrency(account.currency) === DEFAULT_CURRENCY)
     .map((account) => account.id)
 
-  const today = format(new Date(), 'yyyy-MM-dd')
+  const monthRange = formatReportDateRange(getReportDateRange('month'))
 
   return {
     period: 'month',
-    customStart: today,
-    customEnd: today,
+    customStart: monthRange.dateFrom,
+    customEnd: monthRange.dateTo,
     accountIds: kztIds.length > 0 ? kztIds : active.map((account) => account.id)
   }
 }
 
-/** Отчёт по категориям с фильтрами и горизонтальной диаграммой */
-export const CategoryByTypeReport: React.FC<CategoryByTypeReportProps> = ({ type }) => {
+/** Отчёт по категориям с фильтрами и горизонтальной диаграммой */export const CategoryByTypeReport: React.FC<CategoryByTypeReportProps> = ({ type }) => {
   const [filters, setFilters] = useState<ReportFiltersState | null>(null)
   const [defaultsApplied, setDefaultsApplied] = useState(false)
 

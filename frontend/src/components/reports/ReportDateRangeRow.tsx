@@ -65,6 +65,3 @@ export const ReportDateRangeRow: React.FC<ReportDateRangeRowProps> = ({
     </div>
   )
 }
-
-/** @deprecated Используйте ReportDateRangeRow */
-export const ReportCustomDateRangeRow = ReportDateRangeRow
