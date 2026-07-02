@@ -1,13 +1,17 @@
 import React, { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { format, differenceInDays } from 'date-fns'
-import { ru } from 'date-fns/locale'
 import { useNavigate } from 'react-router-dom'
 import { CalendarClock, ChevronRight } from 'lucide-react'
 import { supabaseApi } from '../../api/supabase'
 import { ScheduledTransaction } from '../../types'
 import { formatCurrency } from '../../utils/currency'
 import { cn } from '../../utils/cn'
+import {
+  calendarDaysUntil,
+  formatScheduleDate,
+  getScheduleRelativeLabel,
+  isScheduleOverdue
+} from '../../utils/scheduleDate'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
 import { LoadingSpinner } from '../common/LoadingSpinner'
@@ -33,17 +37,10 @@ const UpcomingScheduledRow: React.FC<UpcomingScheduledRowProps> = ({
   item,
   onExecute
 }) => {
-  const daysUntil = differenceInDays(new Date(item.nextExecutionDate), new Date())
-  const isOverdue = daysUntil < 0
+  const daysUntil = calendarDaysUntil(item.nextExecutionDate)
+  const isOverdue = isScheduleOverdue(item.nextExecutionDate)
   const isToday = daysUntil === 0
-
-  const dateLabel = isOverdue
-    ? `просрочено ${Math.abs(daysUntil)} дн.`
-    : isToday
-      ? 'сегодня'
-      : daysUntil === 1
-        ? 'завтра'
-        : `через ${daysUntil} дн.`
+  const dateLabel = getScheduleRelativeLabel(item.nextExecutionDate)
 
   return (
     <div
@@ -73,7 +70,7 @@ const UpcomingScheduledRow: React.FC<UpcomingScheduledRowProps> = ({
                 isOverdue ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-300'
               )}
             >
-              {format(new Date(item.nextExecutionDate), 'dd MMM yyyy', { locale: ru })}
+              {formatScheduleDate(item.nextExecutionDate)}
             </span>
             <span
               className={cn(
@@ -136,9 +133,7 @@ export const UpcomingScheduledBlock: React.FC = () => {
   }
 
   const upcoming = items ?? []
-  const overdueCount = upcoming.filter(
-    (item) => differenceInDays(new Date(item.nextExecutionDate), new Date()) < 0
-  ).length
+  const overdueCount = upcoming.filter((item) => isScheduleOverdue(item.nextExecutionDate)).length
 
   return (
     <Card>

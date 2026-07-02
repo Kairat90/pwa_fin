@@ -3,11 +3,12 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
-import { format } from 'date-fns'
 import { ScheduledTransaction, Account, Category } from '../../types'
 import { supabaseApi, getErrorMessage, ScheduledCreateData } from '../../api/supabase'
 import { cn } from '../../utils/cn'
 import { buildCategoryTree, flattenCategoryTree, formatCategoryOptionLabel } from '../../utils/categoryTree'
+import { toDateInputValue } from '../../utils/dateInput'
+import { optionalScheduledDateToIso, scheduledDateToIso } from '../../utils/scheduleDate'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Modal } from '../ui/Modal'
@@ -75,7 +76,7 @@ export const ScheduledForm: React.FC<ScheduledFormProps> = ({
     defaultValues: {
       type: 'expense',
       frequency: 'monthly',
-      startDate: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+      startDate: toDateInputValue(),
       isActive: true
     }
   })
@@ -93,8 +94,8 @@ export const ScheduledForm: React.FC<ScheduledFormProps> = ({
         title: scheduled.title,
         amount: Number(scheduled.amount),
         type: scheduled.type,
-        startDate: format(new Date(scheduled.startDate), "yyyy-MM-dd'T'HH:mm"),
-        endDate: scheduled.endDate ? format(new Date(scheduled.endDate), "yyyy-MM-dd'T'HH:mm") : '',
+        startDate: toDateInputValue(scheduled.startDate),
+        endDate: scheduled.endDate ? toDateInputValue(scheduled.endDate) : '',
         frequency: scheduled.frequency,
         customDays: scheduled.customDays || undefined,
         note: scheduled.note || '',
@@ -107,7 +108,7 @@ export const ScheduledForm: React.FC<ScheduledFormProps> = ({
         title: '',
         amount: undefined,
         type: 'expense',
-        startDate: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+        startDate: toDateInputValue(),
         endDate: '',
         frequency: 'monthly',
         customDays: undefined,
@@ -148,8 +149,8 @@ export const ScheduledForm: React.FC<ScheduledFormProps> = ({
         title: data.title,
         amount: data.amount,
         type: data.type,
-        startDate: new Date(data.startDate).toISOString(),
-        endDate: data.endDate ? new Date(data.endDate).toISOString() : undefined,
+        startDate: scheduledDateToIso(data.startDate),
+        endDate: optionalScheduledDateToIso(data.endDate),
         frequency: data.frequency,
         customDays: data.frequency === 'custom' ? data.customDays : undefined,
         note: data.note,
@@ -296,9 +297,9 @@ export const ScheduledForm: React.FC<ScheduledFormProps> = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Дата начала</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Дата первого выполнения</label>
               <input
-                type="datetime-local"
+                type="date"
                 className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 {...register('startDate')}
               />
@@ -310,7 +311,7 @@ export const ScheduledForm: React.FC<ScheduledFormProps> = ({
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Дата окончания (опционально)</label>
               <input
-                type="datetime-local"
+                type="date"
                 className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 {...register('endDate')}
               />

@@ -1,6 +1,4 @@
 import React, { useState } from 'react'
-import { format, differenceInDays } from 'date-fns'
-import { ru } from 'date-fns/locale'
 import { Edit2, Trash2, Play, SkipForward, Calendar } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { ScheduledTransaction } from '../../types'
@@ -8,6 +6,11 @@ import { supabaseApi, getErrorMessage } from '../../api/supabase'
 import { formatCurrency } from '../../utils/currency'
 import { cn } from '../../utils/cn'
 import { EMOJI_BOX_16, ICON_16 } from '../../utils/iconSize'
+import {
+  formatScheduleDate,
+  getScheduleRelativeLabel,
+  isScheduleOverdue
+} from '../../utils/scheduleDate'
 import { ScheduledExecuteModal } from './ScheduledExecuteModal'
 
 interface ScheduledCardProps {
@@ -35,10 +38,8 @@ export const ScheduledCard: React.FC<ScheduledCardProps> = ({
   const [loading, setLoading] = useState(false)
   const [showExecuteModal, setShowExecuteModal] = useState(false)
 
-  const daysUntilNext = differenceInDays(
-    new Date(scheduled.nextExecutionDate),
-    new Date()
-  )
+  const daysText = getScheduleRelativeLabel(scheduled.nextExecutionDate)
+  const isOverdue = isScheduleOverdue(scheduled.nextExecutionDate)
 
   const handleSkip = async () => {
     try {
@@ -54,18 +55,13 @@ export const ScheduledCard: React.FC<ScheduledCardProps> = ({
   }
 
   const frequencyLabel = FREQUENCY_LABELS[scheduled.frequency] || scheduled.frequency
-  const daysText = daysUntilNext > 0
-    ? `через ${daysUntilNext} дн.`
-    : daysUntilNext === 0
-      ? 'сегодня'
-      : `просрочено на ${Math.abs(daysUntilNext)} дн.`
 
   return (
     <>
       <div className={cn(
         'bg-white rounded-xl border p-5 shadow-sm hover:shadow-md transition-all',
         !scheduled.isActive && 'opacity-60',
-        daysUntilNext < 0 && scheduled.isActive && 'border-red-200 bg-red-50/30'
+        isOverdue && scheduled.isActive && 'border-red-200 bg-red-50/30'
       )}>
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
@@ -159,10 +155,10 @@ export const ScheduledCard: React.FC<ScheduledCardProps> = ({
                 <p className="text-sm text-gray-500">Следующее выполнение</p>
                 <p className="font-medium text-gray-900 flex items-center gap-1 flex-wrap">
                   <Calendar className={cn(ICON_16, 'text-gray-400')} />
-                  {format(new Date(scheduled.nextExecutionDate), 'dd MMM yyyy', { locale: ru })}
+                  {formatScheduleDate(scheduled.nextExecutionDate)}
                   <span className={cn(
                     'text-xs',
-                    daysUntilNext < 0 ? 'text-red-600' : 'text-gray-500'
+                    isOverdue ? 'text-red-600' : 'text-gray-500'
                   )}>
                     ({daysText})
                   </span>
@@ -173,7 +169,7 @@ export const ScheduledCard: React.FC<ScheduledCardProps> = ({
               <div>
                 <p className="text-sm text-gray-500">Дата окончания</p>
                 <p className="text-sm text-gray-700">
-                  {format(new Date(scheduled.endDate), 'dd MMM yyyy', { locale: ru })}
+                  {formatScheduleDate(scheduled.endDate)}
                 </p>
               </div>
             )}
@@ -181,7 +177,7 @@ export const ScheduledCard: React.FC<ScheduledCardProps> = ({
               <div>
                 <p className="text-sm text-gray-500">Последнее выполнение</p>
                 <p className="text-sm text-gray-700">
-                  {format(new Date(scheduled.lastExecutedDate), 'dd MMM yyyy', { locale: ru })}
+                  {formatScheduleDate(scheduled.lastExecutedDate)}
                 </p>
               </div>
             )}
