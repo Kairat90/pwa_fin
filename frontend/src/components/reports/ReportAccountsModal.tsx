@@ -68,9 +68,9 @@ export const ReportAccountsModal: React.FC<ReportAccountsModalProps> = ({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Выбор счёта" size="sm">
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap gap-3 pb-3 border-b border-gray-100 dark:border-gray-800">
+    <Modal isOpen={isOpen} onClose={onClose} title="Выбор счёта" size="md" tallMobile>
+      <div className="flex flex-col gap-4 min-h-[min(72dvh,36rem)]">
+        <div className="flex flex-wrap gap-3 pb-3 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <button
             type="button"
             onClick={selectAllKzt}
@@ -87,7 +87,7 @@ export const ReportAccountsModal: React.FC<ReportAccountsModalProps> = ({
           </button>
         </div>
 
-        <div className="space-y-1 max-h-[50vh] overflow-y-auto -mx-1 px-1">
+        <div className="flex-1 min-h-[min(52dvh,28rem)] overflow-y-auto overscroll-contain py-2 px-0.5 space-y-2">
           {activeAccounts.length === 0 ? (
             <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
               Нет активных счетов
@@ -128,12 +128,12 @@ export const ReportAccountsModal: React.FC<ReportAccountsModalProps> = ({
         </div>
 
         {draftIds.length === 0 && (
-          <p className="text-sm text-amber-600 dark:text-amber-400">
+          <p className="text-sm text-amber-600 dark:text-amber-400 shrink-0">
             Выберите хотя бы один счёт
           </p>
         )}
 
-        <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+        <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-800 shrink-0">
           <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
             Отмена
           </Button>
