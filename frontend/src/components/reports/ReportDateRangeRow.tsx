@@ -9,8 +9,8 @@ interface ReportDateRangeRowProps {
   className?: string
 }
 
-const dateInputClassName =
-  'block w-full max-w-full min-w-0 box-border rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 px-2 py-1 text-sm h-8'
+const dateFieldClassName =
+  'report-date-field block w-full min-w-0 max-w-full box-border rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 px-2 py-2 text-sm'
 
 /** Строка выбора произвольного периода (мобильная версия отчётов) */
 export const ReportDateRangeRow: React.FC<ReportDateRangeRowProps> = ({
@@ -32,8 +32,8 @@ export const ReportDateRangeRow: React.FC<ReportDateRangeRowProps> = ({
         <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">Выберите период</span>
       </div>
 
-      <div className="flex items-end gap-1.5 min-w-0">
-        <div className="flex-1 min-w-0 basis-0">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-x-1.5 gap-y-0 min-w-0 w-full">
+        <div className="min-w-0 w-full overflow-hidden">
           <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">С</label>
           <input
             type="date"
@@ -45,20 +45,20 @@ export const ReportDateRangeRow: React.FC<ReportDateRangeRowProps> = ({
 
               onChange(nextStart, nextEnd)
             }}
-            className={dateInputClassName}
+            className={dateFieldClassName}
           />
         </div>
 
-        <span className="text-xs text-gray-400 pb-2 shrink-0">—</span>
+        <span className="text-xs text-gray-400 pb-2.5 shrink-0 px-0.5">—</span>
 
-        <div className="flex-1 min-w-0 basis-0">
+        <div className="min-w-0 w-full overflow-hidden">
           <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">По</label>
           <input
             type="date"
             value={customEnd}
             min={customStart || undefined}
             onChange={(e) => onChange(customStart, e.target.value)}
-            className={dateInputClassName}
+            className={dateFieldClassName}
           />
         </div>
       </div>

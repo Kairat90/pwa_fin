@@ -33,6 +33,34 @@
     min-width: 0;
     max-width: 100%;
   }
+
+  /* Компактные поля дат в отчётах — не вылезают за контейнер на мобильных */
+  .report-date-field {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .report-date-field::-webkit-date-and-time-value {
+    text-align: left;
+    min-width: 0;
+  }
+
+  .report-date-field::-webkit-datetime-edit {
+    min-width: 0;
+    padding: 0;
+  }
+
+  .report-date-field::-webkit-datetime-edit-fields-wrapper {
+    min-width: 0;
+    padding: 0;
+  }
+
+  .report-date-field::-webkit-calendar-picker-indicator {
+    margin-left: 0;
+    padding: 0;
+  }
 }
 
 /* Согласованные поверхности для существующих utility-классов (тёмная тема) */
