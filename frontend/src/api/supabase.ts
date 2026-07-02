@@ -589,6 +589,26 @@ export const supabaseApi = {
       }
     },
 
+    /** Все транзакции за период (для отчётов с фильтром по счетам) */
+    getAllInRange: async (startDate: string, endDate: string, accountIds?: string[]): Promise<Transaction[]> => {
+      let query = supabase
+        .from('transactions')
+        .select('*, account:accounts(*), category:categories(*)')
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .order('date', { ascending: false })
+        .limit(5000)
+
+      if (accountIds && accountIds.length > 0) {
+        query = query.in('account_id', accountIds)
+      }
+
+      const { data, error } = await query
+      if (error) throw new Error(error.message)
+
+      return mapKeys<Transaction[]>(data ?? [])
+    },
+
     getOne: async (id: string): Promise<Transaction> => {
       const { data, error } = await supabase
         .from('transactions')
