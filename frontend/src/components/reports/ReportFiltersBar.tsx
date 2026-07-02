@@ -10,6 +10,7 @@ import {
   ReportPeriodPreset
 } from '../../utils/reportPeriod'
 import { Button } from '../ui/Button'
+import { ReportAccountsModal } from './ReportAccountsModal'
 
 export type ReportFiltersState = {
   period: ReportPeriodPreset
@@ -28,7 +29,7 @@ interface ReportFiltersBarProps {
 
 const PERIOD_OPTIONS: ReportPeriodPreset[] = ['day', 'week', 'month', 'year', 'custom']
 
-type OpenDropdown = 'period' | 'accounts' | null
+type OpenDropdown = 'period' | null
 
 interface FilterDropdownProps {
   icon: React.ReactNode
@@ -144,6 +145,7 @@ export const ReportFiltersBar: React.FC<ReportFiltersBarProps> = ({
   currencyLabel = 'KZT'
 }) => {
   const [openDropdown, setOpenDropdown] = useState<OpenDropdown>(null)
+  const [accountsModalOpen, setAccountsModalOpen] = useState(false)
   const activeAccounts = accounts.filter((account) => !account.isArchived)
 
   const toggleDropdown = (id: OpenDropdown) => {
@@ -207,67 +209,11 @@ export const ReportFiltersBar: React.FC<ReportFiltersBarProps> = ({
     </div>
   )
 
-  const accountOptions = (
-    <div className="space-y-2">
-      <div className="flex flex-wrap gap-2 pb-2 border-b border-gray-100 dark:border-gray-800">
-        <button
-          type="button"
-          onClick={selectAllKzt}
-          className="text-xs text-primary-600 hover:underline dark:text-primary-400"
-        >
-          Все {currencyLabel}
-        </button>
-        <button
-          type="button"
-          onClick={() => onChange({ ...filters, accountIds: activeAccounts.map((account) => account.id) })}
-          className="text-xs text-gray-500 hover:underline dark:text-gray-400"
-        >
-          Все счета
-        </button>
-      </div>
-
-      {activeAccounts.map((account) => {
-        const selected = filters.accountIds.includes(account.id)
-
-        return (
-          <label
-            key={account.id}
-            className={cn(
-              'flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer transition-colors',
-              selected ? 'bg-primary-50 dark:bg-primary-900/30' : 'hover:bg-gray-50 dark:hover:bg-gray-800'
-            )}
-          >
-            <input
-              type="checkbox"
-              checked={selected}
-              onChange={() => toggleAccount(account.id)}
-              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-            />
-            <span className="text-sm text-gray-900 dark:text-gray-100 truncate">
-              {account.icon ? `${account.icon} ` : ''}{account.name}
-            </span>
-            <span className="text-xs text-gray-400 ml-auto shrink-0">
-              {normalizeCurrency(account.currency)}
-            </span>
-          </label>
-        )
-      })}
-
-      {filters.accountIds.length === 0 && (
-        <p className="text-xs text-amber-600 dark:text-amber-400 pt-1">
-          Выберите хотя бы один счёт
-        </p>
-      )}
-
-      <Button type="button" size="sm" className="w-full" onClick={() => setOpenDropdown(null)}>
-        Готово
-      </Button>
-    </div>
-  )
+  const accountsSummary = getAccountsSummary(filters.accountIds, activeAccounts)
 
   return (
     <div className="space-y-4">
-      {/* Мобильная версия — компактные выпадающие кнопки */}
+      {/* Мобильная версия — период выпадающий, счёт в модалке */}
       <div className="md:hidden space-y-2">
         <div className="flex gap-2">
           <FilterDropdown
@@ -280,15 +226,23 @@ export const ReportFiltersBar: React.FC<ReportFiltersBarProps> = ({
             {periodOptions}
           </FilterDropdown>
 
-          <FilterDropdown
-            icon={<Wallet className="w-4 h-4" />}
-            label="Счета"
-            value={getAccountsSummary(filters.accountIds, activeAccounts)}
-            isOpen={openDropdown === 'accounts'}
-            onToggle={() => toggleDropdown('accounts')}
+          <button
+            type="button"
+            onClick={() => setAccountsModalOpen(true)}
+            className="flex-1 min-w-0 flex items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 text-left transition-colors"
           >
-            {accountOptions}
-          </FilterDropdown>
+            <span className="text-gray-500 dark:text-gray-400 shrink-0">
+              <Wallet className="w-4 h-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500 leading-none mb-0.5">
+                Счёт
+              </span>
+              <span className="block text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                {accountsSummary}
+              </span>
+            </span>
+          </button>
 
           <Button
             type="button"
@@ -301,6 +255,15 @@ export const ReportFiltersBar: React.FC<ReportFiltersBarProps> = ({
             <RotateCcw className="w-4 h-4" />
           </Button>
         </div>
+
+        <ReportAccountsModal
+          isOpen={accountsModalOpen}
+          onClose={() => setAccountsModalOpen(false)}
+          accounts={accounts}
+          selectedIds={filters.accountIds}
+          currencyLabel={currencyLabel}
+          onApply={(accountIds) => onChange({ ...filters, accountIds })}
+        />
       </div>
 
       {/* Десктоп — кнопки в ряд */}
