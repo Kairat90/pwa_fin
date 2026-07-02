@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { format, startOfMonth, endOfMonth } from 'date-fns'
+import { format } from 'date-fns'
 import { Calendar, ChevronDown, RotateCcw, Wallet } from 'lucide-react'
 import { Account } from '../../types'
 import { cn } from '../../utils/cn'
 import { normalizeCurrency } from '../../utils/currency'
 import {
+  applyReportPreset,
   REPORT_PERIOD_LABELS,
   ReportPeriodPreset
 } from '../../utils/reportPeriod'
@@ -126,7 +127,7 @@ function getPeriodSummary(
   customStart: string,
   customEnd: string
 ): string {
-  if (period === 'custom' && customStart) {
+  if (customStart) {
     const end = customEnd || customStart
     return `${format(new Date(customStart), 'dd.MM.yy')} — ${format(new Date(end), 'dd.MM.yy')}`
   }
@@ -172,16 +173,13 @@ export const ReportFiltersBar: React.FC<ReportFiltersBarProps> = ({
     })
   }
 
-  const selectCustomPeriod = () => {
-    const now = new Date()
-    const monthStart = format(startOfMonth(now), 'yyyy-MM-dd')
-    const monthEnd = format(endOfMonth(now), 'yyyy-MM-dd')
+  const applyPreset = (preset: ReportPeriodPreset) => {
+    const dates = applyReportPreset(preset, filters)
 
     onChange({
       ...filters,
-      period: 'custom',
-      customStart: filters.customStart || monthStart,
-      customEnd: filters.customEnd || monthEnd
+      ...dates,
+      accountIds: filters.accountIds
     })
     setOpenDropdown(null)
   }
@@ -192,15 +190,7 @@ export const ReportFiltersBar: React.FC<ReportFiltersBarProps> = ({
         <button
           key={preset}
           type="button"
-          onClick={() => {
-            if (preset === 'custom') {
-              selectCustomPeriod()
-              return
-            }
-
-            onChange({ ...filters, period: preset })
-            setOpenDropdown(null)
-          }}
+          onClick={() => applyPreset(preset)}
           className={cn(
             'w-full text-left px-3 py-2 rounded-lg text-sm transition-colors',
             filters.period === preset
@@ -318,7 +308,7 @@ export const ReportFiltersBar: React.FC<ReportFiltersBarProps> = ({
             <button
               key={preset}
               type="button"
-              onClick={() => onChange({ ...filters, period: preset })}
+              onClick={() => applyPreset(preset)}
               className={cn(
                 'px-3 py-1.5 text-sm rounded-lg border transition-colors',
                 filters.period === preset
@@ -416,7 +406,7 @@ export function formatReportPeriodHint(
   customStart: string,
   customEnd: string
 ): string {
-  if (period === 'custom' && customStart) {
+  if (customStart) {
     const end = customEnd || customStart
     return `${format(new Date(customStart), 'dd.MM.yyyy')} — ${format(new Date(end), 'dd.MM.yyyy')}`
   }

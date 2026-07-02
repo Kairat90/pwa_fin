@@ -62,3 +62,30 @@ export const REPORT_PERIOD_LABELS: Record<ReportPeriodPreset, string> = {
   year: 'Год',
   custom: 'Период'
 }
+
+/** Даты yyyy-MM-dd для пресета или произвольного периода */
+export function applyReportPreset(
+  preset: ReportPeriodPreset,
+  existing?: { customStart?: string; customEnd?: string }
+): { period: ReportPeriodPreset; customStart: string; customEnd: string } {
+  if (preset === 'custom') {
+    const now = new Date()
+    const monthStart = format(startOfMonth(now), 'yyyy-MM-dd')
+    const monthEnd = format(endOfMonth(now), 'yyyy-MM-dd')
+
+    return {
+      period: 'custom',
+      customStart: existing?.customStart || monthStart,
+      customEnd: existing?.customEnd || monthEnd
+    }
+  }
+
+  const range = formatReportDateRange(getReportDateRange(preset))
+
+  return {
+    period: preset,
+    customStart: range.dateFrom,
+    customEnd: range.dateTo
+  }
+}
+
