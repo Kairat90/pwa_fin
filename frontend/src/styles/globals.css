@@ -29,19 +29,6 @@
     @apply bg-gray-800 text-gray-100 border-gray-700;
   }
 
-  input[type='date'] {
-    min-width: 0;
-    max-width: 100%;
-  }
-
-  /* Компактные поля дат в отчётах — не вылезают за контейнер на мобильных */
-  .report-date-field {
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
-    box-sizing: border-box;
-  }
-
   .report-date-field::-webkit-date-and-time-value {
     text-align: left;
     min-width: 0;
