@@ -14,8 +14,7 @@ import { Modal } from '../ui/Modal'
 const categorySchema = z.object({
   name: z.string().min(1, 'Название обязательно'),
   type: z.enum(['income', 'expense']),
-  parentId: z.string().optional(),
-  color: z.string().optional()
+  parentId: z.string().optional()
 })
 
 type CategoryFormData = z.infer<typeof categorySchema>
@@ -37,7 +36,6 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
 }) => {
   const [loading, setLoading] = useState(false)
   const [allCategories, setAllCategories] = useState<Category[]>(allCategoriesProp ?? [])
-  const [selectedColor, setSelectedColor] = useState(category?.color || '#6B7280')
 
   const {
     register,
@@ -50,8 +48,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
     resolver: zodResolver(categorySchema),
     defaultValues: {
       type: 'expense',
-      parentId: '',
-      color: '#6B7280'
+      parentId: ''
     }
   })
 
@@ -68,18 +65,14 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
       reset({
         name: category.name,
         type: category.type,
-        parentId: category.parentId || '',
-        color: category.color || '#6B7280'
+        parentId: category.parentId || ''
       })
-      setSelectedColor(category.color || '#6B7280')
     } else {
       reset({
         name: '',
         type: 'expense',
-        parentId: '',
-        color: '#6B7280'
+        parentId: ''
       })
-      setSelectedColor('#6B7280')
     }
   }, [isOpen, category, reset, allCategoriesProp])
 
@@ -93,7 +86,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
         name: data.name,
         type: data.type,
         icon: '',
-        color: selectedColor,
+        color: '',
         parentId: data.parentId || null
       }
 
@@ -138,13 +131,13 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
                 setValue('parentId', '')
               }}
               className={cn(
-                'p-3 rounded-lg border-2 transition-colors text-center',
+                'p-3 rounded-lg border-2 transition-colors text-center font-medium',
                 selectedType === 'expense'
                   ? 'border-red-500 bg-red-50 text-red-700'
                   : 'border-gray-200 hover:border-gray-300'
               )}
             >
-              💸 Расход
+              Расход
             </button>
             <button
               type="button"
@@ -153,13 +146,13 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
                 setValue('parentId', '')
               }}
               className={cn(
-                'p-3 rounded-lg border-2 transition-colors text-center',
+                'p-3 rounded-lg border-2 transition-colors text-center font-medium',
                 selectedType === 'income'
                   ? 'border-green-500 bg-green-50 text-green-700'
                   : 'border-gray-200 hover:border-gray-300'
               )}
             >
-              💰 Доход
+              Доход
             </button>
           </div>
         </div>
@@ -180,30 +173,6 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
           <p className="mt-1 text-xs text-gray-500">
             Выберите группу, чтобы объединить категории (например: «Дом» → «Коммунальные»)
           </p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Цвет</label>
-          <div className="flex gap-2 flex-wrap">
-            {[
-              '#6B7280', '#EF4444', '#F59E0B', '#10B981',
-              '#4F46E5', '#8B5CF6', '#EC4899', '#14B8A6',
-              '#F97316', '#1F2937'
-            ].map((color) => (
-              <button
-                key={color}
-                type="button"
-                onClick={() => setSelectedColor(color)}
-                className={cn(
-                  'w-9 h-9 sm:w-8 sm:h-8 rounded-full transition-all',
-                  selectedColor === color
-                    ? 'ring-2 ring-primary-500 ring-offset-2'
-                    : 'hover:scale-110'
-                )}
-                style={{ backgroundColor: color }}
-              />
-            ))}
-          </div>
         </div>
 
         <div className="flex gap-3 pt-4 border-t border-gray-100">

@@ -82,12 +82,6 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
             <span className="w-4 shrink-0" aria-hidden />
           )}
 
-          <div
-            className="w-3 h-3 rounded-full shrink-0"
-            style={{ backgroundColor: category.color || '#E5E7EB' }}
-            aria-hidden
-          />
-
           <div className="min-w-0">
             <h4 className="font-medium text-gray-900 truncate text-sm leading-tight">{category.name}</h4>
             {(category.isSystem || (hasChildren && isCollapsed)) && (

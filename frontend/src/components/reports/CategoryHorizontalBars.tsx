@@ -1,7 +1,6 @@
-import React, { useMemo } from 'react'
+import React from 'react'
 import { CategoryBreakdown } from '../../api/supabase'
 import { formatCurrency } from '../../utils/currency'
-import { buildChartPalette } from '../../utils/chartColors'
 import { cn } from '../../utils/cn'
 
 interface CategoryHorizontalBarsProps {
@@ -10,20 +9,18 @@ interface CategoryHorizontalBarsProps {
   currency?: string
 }
 
+const BAR_COLORS = {
+  income: '#10B981',
+  expense: '#EF4444'
+} as const
+
 /** Горизонтальные столбцы: категория, сумма, полоса с процентом */
 export const CategoryHorizontalBars: React.FC<CategoryHorizontalBarsProps> = ({
   data,
   type,
   currency = 'KZT'
 }) => {
-  const items = useMemo(() => {
-    const palette = buildChartPalette(data.length, data.map((d) => d.id).join('|'))
-
-    return data.map((item, index) => ({
-      ...item,
-      barColor: palette[index]
-    }))
-  }, [data])
+  const barColor = BAR_COLORS[type]
 
   if (data.length === 0) {
     return (
@@ -35,7 +32,7 @@ export const CategoryHorizontalBars: React.FC<CategoryHorizontalBarsProps> = ({
 
   return (
     <div className="space-y-4">
-      {items.map((item) => {
+      {data.map((item) => {
         const width = Math.max(item.percentage, item.percentage > 0 ? 4 : 0)
         const showPercentInside = item.percentage >= 12
 
@@ -43,11 +40,6 @@ export const CategoryHorizontalBars: React.FC<CategoryHorizontalBarsProps> = ({
           <div key={item.id}>
             <div className="flex items-center justify-between gap-3 mb-1.5">
               <div className="flex items-center gap-2 min-w-0">
-                <span
-                  className="w-2.5 h-2.5 rounded-full shrink-0"
-                  style={{ backgroundColor: item.barColor }}
-                  aria-hidden
-                />
                 <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                   {item.name}
                 </span>
@@ -64,7 +56,7 @@ export const CategoryHorizontalBars: React.FC<CategoryHorizontalBarsProps> = ({
             <div className="relative h-9 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
               <div
                 className="h-full rounded-lg transition-all duration-500 flex items-center"
-                style={{ width: `${width}%`, backgroundColor: item.barColor }}
+                style={{ width: `${width}%`, backgroundColor: barColor }}
               >
                 {showPercentInside && (
                   <span className="ml-auto mr-2 text-xs font-semibold text-white drop-shadow-sm">
@@ -84,3 +76,4 @@ export const CategoryHorizontalBars: React.FC<CategoryHorizontalBarsProps> = ({
     </div>
   )
 }
+
