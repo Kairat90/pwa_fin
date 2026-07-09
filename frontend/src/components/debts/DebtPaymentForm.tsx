@@ -5,6 +5,7 @@ import { z } from 'zod'
 import toast from 'react-hot-toast'
 import { Account, Debt, DebtEntryMode, DebtPayment } from '../../types'
 import { supabaseApi, getErrorMessage } from '../../api/supabase'
+import { getAccountDisplayIcon } from '../../utils/accountIcons'
 import { formatCurrency, normalizeCurrency } from '../../utils/currency'
 import { dateInputToIso, toDateInputValue } from '../../utils/dateInput'
 import { Button } from '../ui/Button'
@@ -267,7 +268,7 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
               <option value="">Выберите счёт</option>
               {accounts.map((account) => (
                 <option key={account.id} value={account.id}>
-                  {account.icon ? `${account.icon} ` : ''}{account.name} ({account.currency})
+                  {getAccountDisplayIcon(account)} {account.name} ({account.currency})
                 </option>
               ))}
             </select>

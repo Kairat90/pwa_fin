@@ -3,6 +3,7 @@ import { Filter, X } from 'lucide-react'
 import { Account, Category } from '../../types'
 import { Button } from '../ui/Button'
 import { SearchField } from '../common/SearchField'
+import { getAccountDisplayIcon } from '../../utils/accountIcons'
 
 export interface TransactionFilterValues {
   search?: string
@@ -136,7 +137,7 @@ export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
                 <option value="">Все счета</option>
                 {accounts.map((account) => (
                   <option key={account.id} value={account.id}>
-                    {account.icon} {account.name}
+                    {getAccountDisplayIcon(account)} {account.name}
                   </option>
                 ))}
               </select>
@@ -152,7 +153,7 @@ export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
                 <option value="">Все категории</option>
                 {categories.map((category) => (
                   <option key={category.id} value={category.id}>
-                    {category.icon} {category.name}
+                    {category.name}
                   </option>
                 ))}
               </select>

@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { Account } from '../../types'
 import { cn } from '../../utils/cn'
+import { getAccountDisplayColor, getAccountDisplayIcon } from '../../utils/accountIcons'
 import { normalizeCurrency } from '../../utils/currency'
+import { EMOJI_BOX_16 } from '../../utils/iconSize'
 import { Button } from '../ui/Button'
 import { Modal } from '../ui/Modal'
 
@@ -112,7 +114,13 @@ export const ReportAccountsModal: React.FC<ReportAccountsModalProps> = ({
                     onChange={() => toggleAccount(account.id)}
                     className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 shrink-0"
                   />
-                  <span className="text-xl shrink-0" aria-hidden>{account.icon || '💰'}</span>
+                  <div
+                    className={cn(EMOJI_BOX_16, 'w-7 h-7 text-sm')}
+                    style={{ backgroundColor: getAccountDisplayColor(account) }}
+                    aria-hidden
+                  >
+                    {getAccountDisplayIcon(account)}
+                  </div>
                   <span className="flex-1 min-w-0">
                     <span className="block text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                       {account.name}

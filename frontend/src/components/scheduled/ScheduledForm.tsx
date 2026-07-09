@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { ScheduledTransaction, Account, Category } from '../../types'
 import { supabaseApi, getErrorMessage, ScheduledCreateData } from '../../api/supabase'
 import { cn } from '../../utils/cn'
+import { getAccountDisplayIcon } from '../../utils/accountIcons'
 import { buildCategoryTree, flattenCategoryTree, formatCategoryOptionLabel } from '../../utils/categoryTree'
 import { toDateInputValue } from '../../utils/dateInput'
 import { optionalScheduledDateToIso, scheduledDateToIso } from '../../utils/scheduleDate'
@@ -235,7 +236,7 @@ export const ScheduledForm: React.FC<ScheduledFormProps> = ({
                 <option value="">Выберите счет</option>
                 {accounts.filter((a) => !a.isArchived).map((account) => (
                   <option key={account.id} value={account.id}>
-                    {account.icon} {account.name}
+                    {getAccountDisplayIcon(account)} {account.name}
                   </option>
                 ))}
               </select>

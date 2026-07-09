@@ -15,7 +15,6 @@ const categorySchema = z.object({
   name: z.string().min(1, 'Название обязательно'),
   type: z.enum(['income', 'expense']),
   parentId: z.string().optional(),
-  icon: z.string().optional(),
   color: z.string().optional()
 })
 
@@ -28,12 +27,6 @@ interface CategoryFormProps {
   category?: Category
   allCategories?: Category[]
 }
-
-const ICONS = [
-  '🍕', '🛒', '🚗', '🏠', '💡', '📱', '🎮', '📚',
-  '🏥', '💊', '✈️', '🎬', '🍔', '☕', '🎵', '🎨',
-  '💻', '📦', '🏋️', '🧘', '👕', '💄', '🎁', '🏷️'
-]
 
 export const CategoryForm: React.FC<CategoryFormProps> = ({
   isOpen,
@@ -58,7 +51,6 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
     defaultValues: {
       type: 'expense',
       parentId: '',
-      icon: '📁',
       color: '#6B7280'
     }
   })
@@ -77,7 +69,6 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
         name: category.name,
         type: category.type,
         parentId: category.parentId || '',
-        icon: category.icon || '📁',
         color: category.color || '#6B7280'
       })
       setSelectedColor(category.color || '#6B7280')
@@ -86,14 +77,12 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
         name: '',
         type: 'expense',
         parentId: '',
-        icon: '📁',
         color: '#6B7280'
       })
       setSelectedColor('#6B7280')
     }
   }, [isOpen, category, reset, allCategoriesProp])
 
-  const selectedIcon = watch('icon') || '📁'
   const selectedType = watch('type')
   const parentOptions = getParentOptions(allCategories, selectedType, category?.id)
 
@@ -103,7 +92,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
       const payload = {
         name: data.name,
         type: data.type,
-        icon: data.icon,
+        icon: '',
         color: selectedColor,
         parentId: data.parentId || null
       }
@@ -191,27 +180,6 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
           <p className="mt-1 text-xs text-gray-500">
             Выберите группу, чтобы объединить категории (например: «Дом» → «Коммунальные»)
           </p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Иконка</label>
-          <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
-            {ICONS.map((icon) => (
-              <button
-                key={icon}
-                type="button"
-                onClick={() => setValue('icon', icon)}
-                className={cn(
-                  'w-10 h-10 rounded-lg text-xl flex items-center justify-center transition-colors',
-                  selectedIcon === icon
-                    ? 'bg-primary-100 ring-2 ring-primary-500'
-                    : 'bg-gray-50 hover:bg-gray-100'
-                )}
-              >
-                {icon}
-              </button>
-            ))}
-          </div>
         </div>
 
         <div>

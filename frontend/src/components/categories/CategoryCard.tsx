@@ -2,7 +2,7 @@ import React from 'react'
 import { Edit2, Trash2, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react'
 import { Category } from '../../types'
 import { cn } from '../../utils/cn'
-import { EMOJI_BOX_16, ICON_16 } from '../../utils/iconSize'
+import { ICON_16 } from '../../utils/iconSize'
 
 interface CategoryCardProps {
   category: Category
@@ -82,9 +82,11 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
             <span className="w-4 shrink-0" aria-hidden />
           )}
 
-          <div className={EMOJI_BOX_16} style={{ backgroundColor: category.color || '#E5E7EB' }}>
-            {category.icon || '📁'}
-          </div>
+          <div
+            className="w-3 h-3 rounded-full shrink-0"
+            style={{ backgroundColor: category.color || '#E5E7EB' }}
+            aria-hidden
+          />
 
           <div className="min-w-0">
             <h4 className="font-medium text-gray-900 truncate text-sm leading-tight">{category.name}</h4>

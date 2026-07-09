@@ -43,7 +43,11 @@ export const CategoryHorizontalBars: React.FC<CategoryHorizontalBarsProps> = ({
           <div key={item.id}>
             <div className="flex items-center justify-between gap-3 mb-1.5">
               <div className="flex items-center gap-2 min-w-0">
-                <span className="text-lg shrink-0" aria-hidden>{item.icon}</span>
+                <span
+                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                  style={{ backgroundColor: item.barColor }}
+                  aria-hidden
+                />
                 <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                   {item.name}
                 </span>

@@ -7,6 +7,7 @@ import { Transaction, Account, Category } from '../../types'
 import { supabaseApi, getErrorMessage } from '../../api/supabase'
 import { formatCurrency } from '../../utils/currency'
 import { cn } from '../../utils/cn'
+import { getAccountDisplayIcon } from '../../utils/accountIcons'
 import { buildCategoryTree, flattenCategoryTree, formatCategoryOptionLabel } from '../../utils/categoryTree'
 import { dateInputToIso, toDateInputValue } from '../../utils/dateInput'
 import { Button } from '../ui/Button'
@@ -187,7 +188,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
               <option value="">Выберите счет</option>
               {accounts.filter((a) => !a.isArchived).map((account) => (
                 <option key={account.id} value={account.id}>
-                  {account.icon} {account.name} ({formatCurrency(Number(account.balance ?? account.initialBalance), account.currency)})
+                  {getAccountDisplayIcon(account)} {account.name} ({formatCurrency(Number(account.balance ?? account.initialBalance), account.currency)})
                 </option>
               ))}
             </select>

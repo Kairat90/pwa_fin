@@ -10,7 +10,8 @@ import { Button } from '../components/ui/Button'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { formatCurrency } from '../utils/currency'
 import { cn } from '../utils/cn'
-import { ICON_16 } from '../utils/iconSize'
+import { getAccountDisplayColor, getAccountDisplayIcon } from '../utils/accountIcons'
+import { EMOJI_BOX_16, ICON_16 } from '../utils/iconSize'
 
 const TransfersPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false)
@@ -44,9 +45,14 @@ const TransfersPage: React.FC = () => {
             {transfers.length} переводов
           </p>
         </div>
-        <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="w-4 h-4 mr-1" />
-          Новый перевод
+        <Button
+          onClick={() => setShowForm(true)}
+          size="sm"
+          className="bg-blue-600 hover:bg-blue-700 inline-flex items-center gap-1 whitespace-nowrap shrink-0 self-start sm:self-auto"
+        >
+          <Plus className="w-4 h-4 shrink-0" />
+          <span className="sm:hidden">Перевод</span>
+          <span className="hidden sm:inline">Переводы</span>
         </Button>
       </div>
 
@@ -69,12 +75,22 @@ const TransfersPage: React.FC = () => {
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-4 flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">{transfer.fromAccount?.icon || '🏦'}</span>
+                    <div
+                      className={cn(EMOJI_BOX_16, 'w-6 h-6 text-sm')}
+                      style={{ backgroundColor: getAccountDisplayColor(transfer.fromAccount ?? {}) }}
+                    >
+                      {getAccountDisplayIcon(transfer.fromAccount ?? {})}
+                    </div>
                     <span className="font-medium">{transfer.fromAccount?.name || 'Удален'}</span>
                   </div>
                   <ArrowRight className={cn(ICON_16, 'text-gray-400 flex-shrink-0')} />
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">{transfer.toAccount?.icon || '🏦'}</span>
+                    <div
+                      className={cn(EMOJI_BOX_16, 'w-6 h-6 text-sm')}
+                      style={{ backgroundColor: getAccountDisplayColor(transfer.toAccount ?? {}) }}
+                    >
+                      {getAccountDisplayIcon(transfer.toAccount ?? {})}
+                    </div>
                     <span className="font-medium">{transfer.toAccount?.name || 'Удален'}</span>
                   </div>
                 </div>

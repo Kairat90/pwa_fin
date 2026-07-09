@@ -117,7 +117,7 @@ function getAccountsSummary(accountIds: string[], activeAccounts: Account[]): st
 
   if (accountIds.length === 1) {
     const account = activeAccounts.find((item) => item.id === accountIds[0])
-    return account ? `${account.icon ? `${account.icon} ` : ''}${account.name}` : '1 счёт'
+    return account ? account.name : '1 счёт'
   }
 
   return `${accountIds.length} счёта`
@@ -350,7 +350,7 @@ export const ReportFiltersBar: React.FC<ReportFiltersBarProps> = ({
                       : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 opacity-60'
                   )}
                 >
-                  {account.icon ? `${account.icon} ` : ''}{account.name}
+                  {account.name}
                   <span className="text-xs ml-1 opacity-70">({normalizeCurrency(account.currency)})</span>
                 </button>
               )

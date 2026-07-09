@@ -198,5 +198,5 @@ export function getCategoryDepth(categories: Category[], categoryId: string): nu
 /** Подпись категории с отступом для select */
 export function formatCategoryOptionLabel(category: Category, depth = 0): string {
   const indent = depth > 0 ? `${'— '.repeat(depth)}` : ''
-  return `${indent}${category.icon || '📁'} ${category.name}`
+  return `${indent}${category.name}`
 }

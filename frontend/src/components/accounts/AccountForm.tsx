@@ -7,7 +7,12 @@ import { Account } from '../../types'
 import { supabaseApi, getErrorMessage } from '../../api/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { DEFAULT_CURRENCY } from '../../utils/currency'
+import {
+  ACCOUNT_ICON_PRESETS,
+  resolveAccountIconPreset
+} from '../../utils/accountIcons'
 import { cn } from '../../utils/cn'
+import { EMOJI_BOX_16 } from '../../utils/iconSize'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Modal } from '../ui/Modal'
@@ -37,7 +42,6 @@ const ACCOUNT_TYPES = [
   { value: 'investment', label: 'Инвестиции' },
   { value: 'savings', label: 'Накопления' }
 ]
-const ICONS = ['💰', '💳', '🏦', '💎', '🏠', '🚗', '📈', '💵']
 
 export const AccountForm: React.FC<AccountFormProps> = ({
   isOpen,
@@ -46,14 +50,13 @@ export const AccountForm: React.FC<AccountFormProps> = ({
   account
 }) => {
   const [loading, setLoading] = useState(false)
-  const [selectedColor, setSelectedColor] = useState(account?.color || '#4F46E5')
+  const [selectedPresetId, setSelectedPresetId] = useState(ACCOUNT_ICON_PRESETS[0].id)
   const { defaultAccountId, refreshProfile, setUserProfile } = useAuth()
 
   const {
     register,
     handleSubmit,
     setValue,
-    watch,
     reset,
     formState: { errors }
   } = useForm<AccountFormData>({
@@ -61,46 +64,58 @@ export const AccountForm: React.FC<AccountFormProps> = ({
     defaultValues: {
       currency: DEFAULT_CURRENCY,
       initialBalance: 0,
-      icon: '💰',
+      icon: ACCOUNT_ICON_PRESETS[0].icon,
       type: 'cash',
-      color: '#4F46E5'
+      color: ACCOUNT_ICON_PRESETS[0].color
     }
   })
 
+  const applyPreset = (presetId: string) => {
+    const preset = ACCOUNT_ICON_PRESETS.find((item) => item.id === presetId) ?? ACCOUNT_ICON_PRESETS[0]
+
+    setSelectedPresetId(preset.id)
+    setValue('icon', preset.icon)
+    setValue('color', preset.color)
+    setValue('type', preset.type)
+  }
+
   useEffect(() => {
-    if (isOpen) {
-      if (account) {
-        reset({
-          name: account.name,
-          currency: account.currency,
-          initialBalance: Number(account.initialBalance),
-          icon: account.icon || '💰',
-          type: (account.type as AccountFormData['type']) || 'cash',
-          color: account.color || '#4F46E5'
-        })
-        setSelectedColor(account.color || '#4F46E5')
-      } else {
-        reset({
-          name: '',
-          currency: DEFAULT_CURRENCY,
-          initialBalance: 0,
-          icon: '💰',
-          type: 'cash',
-          color: '#4F46E5'
-        })
-        setSelectedColor('#4F46E5')
-      }
+    if (!isOpen) {
+      return
+    }
+
+    if (account) {
+      const preset = resolveAccountIconPreset(account.icon, account.color, account.type)
+
+      reset({
+        name: account.name,
+        currency: account.currency,
+        initialBalance: Number(account.initialBalance),
+        icon: preset.icon,
+        type: (account.type as AccountFormData['type']) || preset.type,
+        color: preset.color
+      })
+      setSelectedPresetId(preset.id)
+    } else {
+      const preset = ACCOUNT_ICON_PRESETS[0]
+
+      reset({
+        name: '',
+        currency: DEFAULT_CURRENCY,
+        initialBalance: 0,
+        icon: preset.icon,
+        type: preset.type,
+        color: preset.color
+      })
+      setSelectedPresetId(preset.id)
     }
   }, [isOpen, account, reset])
-
-  const selectedIcon = watch('icon') || '💰'
 
   const onSubmit = async (data: AccountFormData) => {
     try {
       setLoading(true)
       const payload = {
         ...data,
-        color: selectedColor,
         initialBalance: Number(data.initialBalance)
       }
 
@@ -175,46 +190,31 @@ export const AccountForm: React.FC<AccountFormProps> = ({
         />
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Иконка</label>
-          <div className="grid grid-cols-8 gap-2">
-            {ICONS.map((icon) => (
+          <label className="block text-sm font-medium text-gray-700 mb-2">Вид счёта</label>
+          <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+            {ACCOUNT_ICON_PRESETS.map((preset) => (
               <button
-                key={icon}
+                key={preset.id}
                 type="button"
-                onClick={() => setValue('icon', icon)}
+                onClick={() => applyPreset(preset.id)}
                 className={cn(
-                  'w-10 h-10 rounded-lg text-xl flex items-center justify-center transition-colors',
-                  selectedIcon === icon
+                  'flex flex-col items-center gap-1 p-2 rounded-lg transition-colors',
+                  selectedPresetId === preset.id
                     ? 'bg-primary-100 ring-2 ring-primary-500'
                     : 'bg-gray-50 hover:bg-gray-100'
                 )}
+                title={preset.label}
               >
-                {icon}
+                <div
+                  className={cn(EMOJI_BOX_16, 'w-8 h-8 text-base')}
+                  style={{ backgroundColor: preset.color }}
+                >
+                  {preset.icon}
+                </div>
+                <span className="text-[10px] text-gray-500 leading-tight text-center hidden sm:block">
+                  {preset.label}
+                </span>
               </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Цвет</label>
-          <div className="flex gap-2 flex-wrap">
-            {[
-              '#4F46E5', '#10B981', '#F59E0B', '#EF4444',
-              '#8B5CF6', '#EC4899', '#14B8A6', '#F97316',
-              '#6B7280', '#1F2937'
-            ].map((color) => (
-              <button
-                key={color}
-                type="button"
-                onClick={() => setSelectedColor(color)}
-                className={cn(
-                  'w-8 h-8 rounded-full transition-all',
-                  selectedColor === color
-                    ? 'ring-2 ring-primary-500 ring-offset-2'
-                    : 'hover:scale-110'
-                )}
-                style={{ backgroundColor: color }}
-              />
             ))}
           </div>
         </div>

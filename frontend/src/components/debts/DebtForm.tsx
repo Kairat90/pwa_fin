@@ -5,6 +5,7 @@ import { z } from 'zod'
 import toast from 'react-hot-toast'
 import { Debt, Account, Contact } from '../../types'
 import { supabaseApi, getErrorMessage } from '../../api/supabase'
+import { getAccountDisplayIcon } from '../../utils/accountIcons'
 import { DEFAULT_CURRENCY } from '../../utils/currency'
 import { cn } from '../../utils/cn'
 import { dateInputToIso, optionalDateInputToIso, toDateInputValue } from '../../utils/dateInput'
@@ -254,7 +255,7 @@ export const DebtForm: React.FC<DebtFormProps> = ({
                 <option value="">Не учитывать</option>
                 {accounts.filter((a) => !a.isArchived).map((account) => (
                   <option key={account.id} value={account.id}>
-                    {account.icon} {account.name}
+                    {getAccountDisplayIcon(account)} {account.name}
                   </option>
                 ))}
               </select>

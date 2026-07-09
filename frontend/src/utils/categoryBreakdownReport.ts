@@ -36,7 +36,7 @@ export function buildCategoryBreakdown(
     const row = byCategory.get(id) ?? {
       id,
       name: category?.name ?? 'Без категории',
-      icon: category?.icon ?? '📁',
+      icon: category?.icon ?? '',
       color: category?.color ?? '#6B7280',
       amount: 0,
       count: 0
