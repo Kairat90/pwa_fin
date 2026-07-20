@@ -155,7 +155,8 @@ export function getSiblingMoveFlags(
     .filter(
       (c) =>
         c.type === current.type &&
-        (c.parentId ?? null) === (current.parentId ?? null)
+        (c.parentId ?? null) === (current.parentId ?? null) &&
+        Boolean(c.isSystem) === Boolean(current.isSystem)
     )
     .sort(compareCategories)
 

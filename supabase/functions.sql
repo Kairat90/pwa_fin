@@ -117,10 +117,7 @@ BEGIN
         RETURNING id INTO v_id;
     ELSE
         UPDATE public.categories
-        SET sort_order = p_sort_order,
-            icon = COALESCE(icon, p_icon),
-            color = COALESCE(color, p_color),
-            is_system = p_is_system OR categories.is_system
+        SET is_system = p_is_system OR categories.is_system
         WHERE id = v_id;
     END IF;
 
@@ -143,8 +140,15 @@ AS $$
 DECLARE
     uid UUID := auth.uid();
     cur RECORD;
-    neighbor RECORD;
+    sibling_ids UUID[];
+    cur_idx INTEGER;
+    swap_idx INTEGER;
+    i INTEGER;
 BEGIN
+    IF uid IS NULL THEN
+        RAISE EXCEPTION 'Пользователь не авторизован';
+    END IF;
+
     SELECT * INTO cur
     FROM public.categories
     WHERE id = p_category_id AND user_id = uid;
@@ -153,40 +157,46 @@ BEGIN
         RAISE EXCEPTION 'Категория не найдена';
     END IF;
 
+    SELECT ARRAY_AGG(id ORDER BY sort_order ASC, name ASC)
+    INTO sibling_ids
+    FROM public.categories
+    WHERE user_id = uid
+      AND type = cur.type
+      AND parent_id IS NOT DISTINCT FROM cur.parent_id
+      AND is_system IS NOT DISTINCT FROM cur.is_system;
+
+    IF sibling_ids IS NULL OR array_length(sibling_ids, 1) < 2 THEN
+        RETURN;
+    END IF;
+
+    cur_idx := array_position(sibling_ids, cur.id);
+
+    IF cur_idx IS NULL THEN
+        RETURN;
+    END IF;
+
     IF p_direction = 'up' THEN
-        SELECT * INTO neighbor
-        FROM public.categories
-        WHERE user_id = uid
-          AND type = cur.type
-          AND parent_id IS NOT DISTINCT FROM cur.parent_id
-          AND (
-            sort_order < cur.sort_order
-            OR (sort_order = cur.sort_order AND name < cur.name)
-          )
-        ORDER BY sort_order DESC, name DESC
-        LIMIT 1;
+        IF cur_idx <= 1 THEN
+            RETURN;
+        END IF;
+        swap_idx := cur_idx - 1;
     ELSIF p_direction = 'down' THEN
-        SELECT * INTO neighbor
-        FROM public.categories
-        WHERE user_id = uid
-          AND type = cur.type
-          AND parent_id IS NOT DISTINCT FROM cur.parent_id
-          AND (
-            sort_order > cur.sort_order
-            OR (sort_order = cur.sort_order AND name > cur.name)
-          )
-        ORDER BY sort_order ASC, name ASC
-        LIMIT 1;
+        IF cur_idx >= array_length(sibling_ids, 1) THEN
+            RETURN;
+        END IF;
+        swap_idx := cur_idx + 1;
     ELSE
         RAISE EXCEPTION 'Неверное направление: %', p_direction;
     END IF;
 
-    IF NOT FOUND THEN
-        RETURN;
-    END IF;
+    sibling_ids[cur_idx] := sibling_ids[swap_idx];
+    sibling_ids[swap_idx] := cur.id;
 
-    UPDATE public.categories SET sort_order = neighbor.sort_order WHERE id = cur.id;
-    UPDATE public.categories SET sort_order = cur.sort_order WHERE id = neighbor.id;
+    FOR i IN 1 .. array_length(sibling_ids, 1) LOOP
+        UPDATE public.categories
+        SET sort_order = i - 1
+        WHERE id = sibling_ids[i];
+    END LOOP;
 END;
 $$;
 
@@ -400,7 +410,6 @@ DECLARE
     from_acc accounts%ROWTYPE;
     to_acc accounts%ROWTYPE;
     total_with_fee DECIMAL;
-    current_balance DECIMAL;
     transfer_row transfers%ROWTYPE;
     transfer_category_id UUID;
     transfer_note TEXT;
@@ -411,6 +420,10 @@ BEGIN
 
     IF from_account_id = to_account_id THEN
         RAISE EXCEPTION 'Нельзя переводить на тот же счет';
+    END IF;
+
+    IF amount IS NULL OR amount <= 0 THEN
+        RAISE EXCEPTION 'Сумма перевода должна быть больше 0';
     END IF;
 
     SELECT * INTO from_acc FROM accounts WHERE id = from_account_id AND user_id = uid;
@@ -424,11 +437,6 @@ BEGIN
     END IF;
 
     total_with_fee := amount + COALESCE(fee, 0);
-    current_balance := get_account_balance(from_account_id);
-
-    IF current_balance < total_with_fee THEN
-        RAISE EXCEPTION 'Недостаточно средств. Доступно: %', current_balance;
-    END IF;
 
     SELECT id INTO transfer_category_id
     FROM categories
