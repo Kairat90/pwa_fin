@@ -6,12 +6,13 @@ import { cn } from '../../utils/cn'
 interface SearchFieldProps {
   value: string
   onChange: (value: string) => void
-  onSearch: () => void
+  /** Без аргумента — текущее value; при очистке передаётся '' */
+  onSearch: (query?: string) => void
   placeholder?: string
   className?: string
 }
 
-/** Поле поиска: запрос выполняется по Enter или кнопке «Найти» */
+/** Поле поиска: Enter / «Найти»; очистка сразу сбрасывает результаты */
 export const SearchField: React.FC<SearchFieldProps> = ({
   value,
   onChange,
@@ -31,6 +32,7 @@ export const SearchField: React.FC<SearchFieldProps> = ({
 
   const handleClear = () => {
     onChange('')
+    onSearch('')
     inputRef.current?.focus()
   }
 
@@ -61,7 +63,7 @@ export const SearchField: React.FC<SearchFieldProps> = ({
           </button>
         )}
       </div>
-      <Button type="button" variant="outline" onClick={onSearch} className="shrink-0">
+      <Button type="button" variant="outline" onClick={() => onSearch()} className="shrink-0">
         Найти
       </Button>
     </div>

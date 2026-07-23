@@ -94,7 +94,7 @@ const ContactsPage: React.FC = () => {
         <SearchField
           value={searchInput}
           onChange={setSearchInput}
-          onSearch={() => setAppliedSearch(searchInput.trim())}
+          onSearch={(query) => setAppliedSearch((query ?? searchInput).trim())}
           placeholder="Поиск по имени, телефону, email..."
         />
         <button

@@ -61,9 +61,18 @@ export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
     setFilters((prev) => ({ ...prev, [key]: value }))
   }
 
-  const applyFilters = () => {
+  const applyFilters = (searchOverride?: string) => {
+    const nextFilters =
+      searchOverride !== undefined
+        ? { ...filters, search: searchOverride }
+        : filters
+
+    if (searchOverride !== undefined) {
+      setFilters(nextFilters)
+    }
+
     const activeFilters: TransactionFilterValues = {}
-    Object.entries(filters).forEach(([key, value]) => {
+    Object.entries(nextFilters).forEach(([key, value]) => {
       if (value) activeFilters[key as keyof TransactionFilterValues] = value
     })
     onFilter(activeFilters)
@@ -95,7 +104,7 @@ export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
         <SearchField
           value={filters.search}
           onChange={(value) => handleChange('search', value)}
-          onSearch={applyFilters}
+          onSearch={(query) => applyFilters(query)}
           placeholder="Поиск по описанию или тегам..."
         />
         <Button
