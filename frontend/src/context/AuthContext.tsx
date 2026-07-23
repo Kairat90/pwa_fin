@@ -1,4 +1,5 @@
-import React, { createContext, useState, useEffect, useContext, useCallback } from 'react'
+import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react'
+import type { Session } from '@supabase/supabase-js'
 import { supabaseApi } from '../api/supabase'
 import { User } from '../types'
 import { DEFAULT_CURRENCY } from '../utils/currency'
@@ -18,29 +19,60 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-/** Загружает профиль пользователя после авторизации */
+const AUTH_INIT_TIMEOUT_MS = 10000
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error('timeout')), ms)
+    promise.then(
+      (value) => {
+        window.clearTimeout(timer)
+        resolve(value)
+      },
+      (error) => {
+        window.clearTimeout(timer)
+        reject(error)
+      }
+    )
+  })
+}
+
+/** Быстрый user из session, без сетевых запросов */
+function userFromSession(sessionUser: {
+  id: string
+  email?: string
+  user_metadata?: Record<string, unknown>
+}): User {
+  return supabaseApi.auth.mapUser(
+    sessionUser.id,
+    sessionUser.email ?? '',
+    sessionUser.user_metadata
+  )
+}
+
+/** Профиль + ensure в фоне (не блокирует UI) */
 async function loadUserProfile(
-  authUser: { id: string; email?: string; user_metadata?: Record<string, unknown> }
+  authUser: { id: string; email?: string; user_metadata?: Record<string, unknown> },
+  options?: { ensure?: boolean }
 ): Promise<User> {
-  try {
-    await supabaseApi.auth.ensureProfile()
-  } catch {
-    // профиль может уже существовать
+  if (options?.ensure !== false) {
+    try {
+      await supabaseApi.auth.ensureProfile()
+    } catch {
+      // профиль/категории могут уже существовать
+    }
   }
 
   const profile = await supabaseApi.auth.fetchProfile()
   if (profile) return profile
 
-  return supabaseApi.auth.mapUser(
-    authUser.id,
-    authUser.email ?? '',
-    authUser.user_metadata
-  )
+  return userFromSession(authUser)
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const initialSessionHandled = useRef(false)
 
   const refreshProfile = useCallback(async () => {
     const profile = await supabaseApi.auth.fetchProfile()
@@ -52,45 +84,74 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [])
 
   useEffect(() => {
-    const initAuth = async () => {
-      const { data: { session } } = await supabaseApi.auth.getSession()
+    let cancelled = false
 
-      if (session?.user) {
-        try {
-          const profile = await loadUserProfile(session.user)
-          setUser(profile)
-        } catch {
-          setUser(supabaseApi.auth.mapUser(
-            session.user.id,
-            session.user.email ?? '',
-            session.user.user_metadata
-          ))
-        }
+    const applySession = async (session: Session | null, ensure: boolean) => {
+      if (!session?.user) {
+        if (!cancelled) setUser(null)
+        return
       }
 
-      setLoading(false)
+      // Сразу показываем UI по данным сессии — не ждём сеть
+      if (!cancelled) {
+        setUser(userFromSession(session.user))
+      }
+
+      try {
+        const profile = await loadUserProfile(session.user, { ensure })
+        if (!cancelled) setUser(profile)
+      } catch {
+        if (!cancelled) {
+          setUser(userFromSession(session.user))
+        }
+      }
     }
 
-    initAuth()
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await withTimeout(
+          supabaseApi.auth.getSession(),
+          AUTH_INIT_TIMEOUT_MS
+        )
 
-    const { data: { subscription } } = supabaseApi.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        try {
-          const profile = await loadUserProfile(session.user)
-          setUser(profile)
-        } catch {
-          setUser(supabaseApi.auth.mapUser(
-            session.user.id,
-            session.user.email ?? '',
-            session.user.user_metadata
-          ))
-        }
-      } else {
-        setUser(null)
+        if (cancelled) return
+
+        initialSessionHandled.current = true
+        await applySession(session, true)
+      } catch {
+        // getSession завис / сеть — не держим спиннер вечно
+        if (!cancelled) setUser(null)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    void initAuth()
+
+    const { data: { subscription } } = supabaseApi.auth.onAuthStateChange(async (event, session) => {
+      // INITIAL_SESSION уже обработан в getSession — избегаем двойного ensureProfile
+      if (event === 'INITIAL_SESSION') {
+        if (initialSessionHandled.current) return
+        initialSessionHandled.current = true
+        await applySession(session, true)
+        if (!cancelled) setLoading(false)
+        return
+      }
+
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        await applySession(session, event === 'SIGNED_IN')
+        return
+      }
+
+      if (event === 'SIGNED_OUT') {
+        if (!cancelled) setUser(null)
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      cancelled = true
+      subscription.unsubscribe()
+    }
   }, [])
 
   const login = async (email: string, password: string) => {
@@ -99,6 +160,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error('Ошибка входа. Если вы только зарегистрировались — подтвердите email.')
     }
 
+    setUser(userFromSession(authUser))
     const profile = await loadUserProfile(authUser)
     setUser(profile)
   }
@@ -118,6 +180,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { needsEmailConfirmation: true }
     }
 
+    setUser(userFromSession(authUser))
     const profile = await loadUserProfile(authUser)
     setUser(profile)
     return { needsEmailConfirmation: false }

@@ -38,7 +38,18 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        navigateFallback: 'index.html',
+        navigateFallbackDenylist: [/^\/api/],
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.hostname.endsWith('supabase.co'),
+            handler: 'NetworkOnly'
+          }
+        ]
       }
     })
   ],

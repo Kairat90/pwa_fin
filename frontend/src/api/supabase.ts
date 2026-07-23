@@ -400,6 +400,14 @@ export const supabaseApi = {
         }
       }
 
+      // Не гоняем полный init на каждом входе — только если категорий ещё нет
+      const { count, error: countError } = await supabase
+        .from('categories')
+        .select('id', { count: 'exact', head: true })
+
+      if (countError) throw new Error(countError.message)
+      if ((count ?? 0) > 0) return
+
       const { error: catError } = await supabase.rpc('init_system_categories')
       if (catError) {
         throw new Error(catError.message)

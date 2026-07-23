@@ -10,7 +10,11 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { isAuthenticated, loading } = useAuth()
 
   if (loading) {
-    return <LoadingSpinner />
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+        <LoadingSpinner size="lg" />
+      </div>
+    )
   }
 
   if (!isAuthenticated) {
