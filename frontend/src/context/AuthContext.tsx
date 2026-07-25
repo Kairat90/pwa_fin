@@ -103,7 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     // Единственный источник истины при старте — INITIAL_SESSION (не getSession + skip)
-    const { data: { subscription } } = supabaseApi.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabaseApi.auth.onAuthStateChange(async (event, session) => {
       if (cancelled) return
 
       if (event === 'INITIAL_SESSION') {
