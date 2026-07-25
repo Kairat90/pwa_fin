@@ -289,15 +289,25 @@ export const supabaseApi = {
       if (authError) throw new Error(formatAuthError(authError))
       if (!authUser) return null
 
+      return supabaseApi.auth.fetchProfileById(authUser.id, authUser)
+    },
+
+    /** Профиль по id без повторного getUser (быстрее при старте) */
+    fetchProfileById: async (
+      userId: string,
+      authUser?: { id: string; email?: string | null; user_metadata?: Record<string, unknown> }
+    ): Promise<User | null> => {
       const { data, error } = await supabase
         .from('users')
         .select('id, email, name, default_currency, default_account_id, created_at')
-        .eq('id', authUser.id)
+        .eq('id', userId)
         .maybeSingle()
 
       if (error) throw new Error(error.message)
 
       if (!data) {
+        if (!authUser) return null
+
         return {
           id: authUser.id,
           email: authUser.email ?? '',
@@ -376,12 +386,12 @@ export const supabaseApi = {
       await supabase.auth.signOut()
     },
 
-    /** Создаёт профиль и категории, если триггер БД не сработал */
-    ensureProfile: async (): Promise<void> => {
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      if (userError) throw new Error(formatAuthError(userError))
-      if (!user) return
-
+    /** Создаёт профиль и категории для уже известного auth-user (без лишнего getUser) */
+    ensureProfileForUser: async (user: {
+      id: string
+      email?: string | null
+      user_metadata?: Record<string, unknown>
+    }): Promise<void> => {
       const { data: existing } = await supabase
         .from('users')
         .select('id')
@@ -400,7 +410,6 @@ export const supabaseApi = {
         }
       }
 
-      // Не гоняем полный init на каждом входе — только если категорий ещё нет
       const { count, error: countError } = await supabase
         .from('categories')
         .select('id', { count: 'exact', head: true })
@@ -412,6 +421,15 @@ export const supabaseApi = {
       if (catError) {
         throw new Error(catError.message)
       }
+    },
+
+    /** Создаёт профиль и категории, если триггер БД не сработал */
+    ensureProfile: async (): Promise<void> => {
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError) throw new Error(formatAuthError(userError))
+      if (!user) return
+
+      await supabaseApi.auth.ensureProfileForUser(user)
     }
   },
 
