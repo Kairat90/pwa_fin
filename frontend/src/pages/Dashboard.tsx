@@ -20,9 +20,8 @@ import { Card } from '../components/ui/Card'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { cn } from '../utils/cn'
 import { formatCurrency, normalizeCurrency } from '../utils/currency'
-import { getAccountDisplayColor, getAccountDisplayIcon } from '../utils/accountIcons'
 import { resolveDefaultAccount } from '../utils/defaultAccount'
-import { EMOJI_BOX_16 } from '../utils/iconSize'
+import { AccountIcon } from '../components/accounts/AccountIcon'
 
 type Period = 'month' | 'week' | 'today'
 
@@ -152,12 +151,12 @@ const Dashboard: React.FC = () => {
         {defaultAccount ? (
           <>
             <div className="flex items-center gap-3">
-              <div
-                className={cn(EMOJI_BOX_16, 'w-10 h-10 text-xl')}
-                style={{ backgroundColor: getAccountDisplayColor(defaultAccount) }}
-              >
-                {getAccountDisplayIcon(defaultAccount)}
-              </div>
+              <AccountIcon
+                icon={defaultAccount.icon}
+                color={defaultAccount.color}
+                type={defaultAccount.type}
+                size="xl"
+              />
               <div>
                 <p className="text-sm opacity-90">Основной счёт</p>
                 <p className="text-lg font-semibold">{defaultAccount.name}</p>

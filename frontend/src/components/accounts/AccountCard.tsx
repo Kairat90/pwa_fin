@@ -3,8 +3,8 @@ import { Archive, Edit2, RotateCcw, Star } from 'lucide-react'
 import { Account } from '../../types'
 import { formatCurrency } from '../../utils/currency'
 import { cn } from '../../utils/cn'
-import { getAccountDisplayColor, getAccountDisplayIcon } from '../../utils/accountIcons'
-import { EMOJI_BOX_16, ICON_16 } from '../../utils/iconSize'
+import { ICON_16 } from '../../utils/iconSize'
+import { AccountIcon } from './AccountIcon'
 
 interface AccountCardProps {
   account: Account
@@ -41,12 +41,12 @@ export const AccountCard: React.FC<AccountCardProps> = ({
     )}>
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3 min-w-0">
-          <div
-            className={EMOJI_BOX_16}
-            style={{ backgroundColor: getAccountDisplayColor(account) }}
-          >
-            {getAccountDisplayIcon(account)}
-          </div>
+          <AccountIcon
+            icon={account.icon}
+            color={account.color}
+            type={account.type}
+            size="lg"
+          />
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="font-semibold text-gray-900 truncate">{account.name}</h3>

@@ -6,7 +6,7 @@ import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import { Account } from '../../types'
 import { supabaseApi, getErrorMessage } from '../../api/supabase'
-import { getAccountDisplayIcon } from '../../utils/accountIcons'
+import { getAccountOptionLabel } from '../../utils/accountIcons'
 import { formatCurrency } from '../../utils/currency'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
@@ -137,7 +137,7 @@ export const TransferForm: React.FC<TransferFormProps> = ({
                 <option value="">Выберите счет</option>
                 {accounts.filter((a) => !a.isArchived).map((account) => (
                   <option key={account.id} value={account.id}>
-                    {getAccountDisplayIcon(account)} {account.name} ({formatCurrency(Number(account.balance ?? account.initialBalance), account.currency)})
+                    {getAccountOptionLabel(account)} ({formatCurrency(Number(account.balance ?? account.initialBalance), account.currency)})
                   </option>
                 ))}
               </select>
@@ -157,7 +157,7 @@ export const TransferForm: React.FC<TransferFormProps> = ({
                   .filter((a) => !a.isArchived && a.id !== fromAccountId)
                   .map((account) => (
                     <option key={account.id} value={account.id}>
-                      {getAccountDisplayIcon(account)} {account.name} ({formatCurrency(Number(account.balance ?? account.initialBalance), account.currency)})
+                      {getAccountOptionLabel(account)} ({formatCurrency(Number(account.balance ?? account.initialBalance), account.currency)})
                     </option>
                   ))}
               </select>

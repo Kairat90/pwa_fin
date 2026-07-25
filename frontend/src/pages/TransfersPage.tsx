@@ -10,8 +10,8 @@ import { Button } from '../components/ui/Button'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { formatCurrency } from '../utils/currency'
 import { cn } from '../utils/cn'
-import { getAccountDisplayColor, getAccountDisplayIcon } from '../utils/accountIcons'
-import { EMOJI_BOX_16, ICON_16 } from '../utils/iconSize'
+import { AccountIcon } from '../components/accounts/AccountIcon'
+import { ICON_16 } from '../utils/iconSize'
 
 const TransfersPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false)
@@ -75,22 +75,22 @@ const TransfersPage: React.FC = () => {
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-4 flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <div
-                      className={cn(EMOJI_BOX_16, 'w-6 h-6 text-sm')}
-                      style={{ backgroundColor: getAccountDisplayColor(transfer.fromAccount ?? {}) }}
-                    >
-                      {getAccountDisplayIcon(transfer.fromAccount ?? {})}
-                    </div>
+                    <AccountIcon
+                      icon={transfer.fromAccount?.icon}
+                      color={transfer.fromAccount?.color}
+                      type={transfer.fromAccount?.type}
+                      size="sm"
+                    />
                     <span className="font-medium">{transfer.fromAccount?.name || 'Удален'}</span>
                   </div>
                   <ArrowRight className={cn(ICON_16, 'text-gray-400 flex-shrink-0')} />
                   <div className="flex items-center gap-2">
-                    <div
-                      className={cn(EMOJI_BOX_16, 'w-6 h-6 text-sm')}
-                      style={{ backgroundColor: getAccountDisplayColor(transfer.toAccount ?? {}) }}
-                    >
-                      {getAccountDisplayIcon(transfer.toAccount ?? {})}
-                    </div>
+                    <AccountIcon
+                      icon={transfer.toAccount?.icon}
+                      color={transfer.toAccount?.color}
+                      type={transfer.toAccount?.type}
+                      size="sm"
+                    />
                     <span className="font-medium">{transfer.toAccount?.name || 'Удален'}</span>
                   </div>
                 </div>

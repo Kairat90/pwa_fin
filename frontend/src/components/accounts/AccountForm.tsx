@@ -12,7 +12,7 @@ import {
   resolveAccountIconPreset
 } from '../../utils/accountIcons'
 import { cn } from '../../utils/cn'
-import { EMOJI_BOX_16 } from '../../utils/iconSize'
+import { AccountIcon } from './AccountIcon'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Modal } from '../ui/Modal'
@@ -191,27 +191,22 @@ export const AccountForm: React.FC<AccountFormProps> = ({
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Вид счёта</label>
-          <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
             {ACCOUNT_ICON_PRESETS.map((preset) => (
               <button
                 key={preset.id}
                 type="button"
                 onClick={() => applyPreset(preset.id)}
                 className={cn(
-                  'flex flex-col items-center gap-1 p-2 rounded-lg transition-colors',
+                  'flex flex-col items-center gap-1.5 p-2 rounded-lg transition-colors',
                   selectedPresetId === preset.id
                     ? 'bg-primary-100 ring-2 ring-primary-500'
                     : 'bg-gray-50 hover:bg-gray-100'
                 )}
                 title={preset.label}
               >
-                <div
-                  className={cn(EMOJI_BOX_16, 'w-8 h-8 text-base')}
-                  style={{ backgroundColor: preset.color }}
-                >
-                  {preset.icon}
-                </div>
-                <span className="text-[10px] text-gray-500 leading-tight text-center hidden sm:block">
+                <AccountIcon presetId={preset.id} size="md" />
+                <span className="text-[10px] text-gray-500 leading-tight text-center">
                   {preset.label}
                 </span>
               </button>
