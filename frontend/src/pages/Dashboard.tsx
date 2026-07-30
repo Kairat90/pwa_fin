@@ -147,7 +147,7 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-2xl p-6 text-white">
+      <div className="hidden md:block bg-gradient-to-r from-primary-600 to-primary-700 rounded-2xl p-6 text-white">
         {defaultAccount ? (
           <>
             <div className="flex items-center gap-3">
@@ -197,17 +197,19 @@ const Dashboard: React.FC = () => {
       </div>
 
       {summary && (
-        <SummaryCards
-          totalIncome={summary.totalIncome}
-          totalExpense={summary.totalExpense}
-          netFlow={summary.netFlow}
-          transactionCount={summary.transactionCount}
-        />
+        <div className="hidden md:block">
+          <SummaryCards
+            totalIncome={summary.totalIncome}
+            totalExpense={summary.totalExpense}
+            netFlow={summary.netFlow}
+            transactionCount={summary.transactionCount}
+          />
+        </div>
       )}
 
       <UpcomingScheduledBlock />
 
-      <Card>
+      <Card className="hidden md:block">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Сравнение с прошлым периодом</h3>
         {comparisonLoading && <LoadingSpinner />}
         {comparison && !comparisonLoading && (
@@ -219,7 +221,7 @@ const Dashboard: React.FC = () => {
         )}
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="hidden md:grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Динамика баланса{defaultAccount ? `: ${defaultAccount.name}` : ''}
@@ -232,6 +234,11 @@ const Dashboard: React.FC = () => {
           {expenseCategories && <ExpensePieChart data={expenseCategories} type="expense" />}
         </Card>
       </div>
+
+      <Card className="md:hidden">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Структура расходов</h3>
+        {expenseCategories && <ExpensePieChart data={expenseCategories} type="expense" />}
+      </Card>
 
       <Card>
         <div className="flex items-center justify-between mb-4">

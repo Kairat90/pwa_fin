@@ -52,12 +52,12 @@ const UpcomingScheduledRow: React.FC<UpcomingScheduledRowProps> = ({
       )}
     >
       <div className="flex items-start gap-3 flex-1 min-w-0">
-        <span className="text-xl shrink-0" aria-hidden>
+        <span className="text-xl shrink-0 hidden sm:inline" aria-hidden>
           {item.type === 'income' ? '💰' : '💸'}
         </span>
         <div className="min-w-0">
           <p className="font-medium text-gray-900 dark:text-gray-100 truncate">{item.title}</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+          <p className="hidden sm:block text-sm text-gray-500 dark:text-gray-400 truncate">
             {item.account?.name || 'Счёт'}
             {item.category?.name ? ` · ${item.category.name}` : ''}
             {' · '}
@@ -142,9 +142,9 @@ export const UpcomingScheduledBlock: React.FC = () => {
           <CalendarClock className={cn(ICON_16, 'text-primary-600 dark:text-primary-400')} />
           <div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Скоро к оплате
+              Предстоящие платежи
             </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="hidden sm:block text-sm text-gray-500 dark:text-gray-400">
               Запланированные операции на 7 дней
               {overdueCount > 0 && (
                 <span className="text-red-600 dark:text-red-400 ml-1">
@@ -152,6 +152,11 @@ export const UpcomingScheduledBlock: React.FC = () => {
                 </span>
               )}
             </p>
+            {overdueCount > 0 && (
+              <p className="sm:hidden text-sm text-red-600 dark:text-red-400">
+                {overdueCount} просрочено
+              </p>
+            )}
           </div>
         </div>
         <button
