@@ -77,6 +77,7 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
     register,
     handleSubmit,
     reset,
+    setFocus,
     watch,
     formState: { errors }
   } = useForm<EntryFormData>({
@@ -84,7 +85,7 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
     defaultValues: {
       date: toDateInputValue(),
       createTransaction: true,
-      amount: remainingAmount,
+      amount: mode === 'repayment' ? remainingAmount : 0,
       accountId: debt.accountId || ''
     }
   })
@@ -124,10 +125,14 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
         reset({
           date: payment ? toDateInputValue(payment.date) : toDateInputValue(),
           createTransaction: !isEdit,
-          amount: payment ? Number(payment.amount) : (mode === 'repayment' ? remainingAmount : undefined),
+          amount: payment ? Number(payment.amount) : (mode === 'repayment' ? remainingAmount : 0),
           note: payment?.note || '',
           accountId
         })
+
+        if (!payment && mode === 'increase') {
+          window.setTimeout(() => setFocus('amount'), 0)
+        }
       } catch {
         toast.error('Не удалось загрузить счета')
       } finally {
@@ -136,7 +141,7 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
     }
 
     void loadAccounts()
-  }, [isOpen, debt.accountId, debt.currency, isEdit, mode, payment, remainingAmount, reset])
+  }, [isOpen, debt.accountId, debt.currency, isEdit, mode, payment, remainingAmount, reset, setFocus])
 
   const onSubmit = async (data: EntryFormData) => {
     try {

@@ -1,8 +1,15 @@
 node_modules
 dist
+.capacitor
+android
 .env
 .env.local
 .env.production
 *.log
 *.tsbuildinfo
 README.txt
+*.apk
+*.aab
+*.jks
+*.keystore
+local.properties

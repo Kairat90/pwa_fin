@@ -3,7 +3,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Plus } from 'lucide-react'
-import { format, startOfMonth, endOfMonth } from 'date-fns'
+import { format, subDays } from 'date-fns'
+
+/** Период по умолчанию: последние 10 дней по текущую дату */
+function getDefaultDateRange() {
+  const end = new Date()
+  return {
+    startDate: format(subDays(end, 10), 'yyyy-MM-dd'),
+    endDate: format(end, 'yyyy-MM-dd')
+  }
+}
 import { supabaseApi, getErrorMessage } from '../api/supabase'
 import { useAuth } from '../context/AuthContext'
 import { Transaction } from '../types'
@@ -23,9 +32,10 @@ const TransactionsPage: React.FC = () => {
   const queryClient = useQueryClient()
   const { defaultAccountId, defaultCurrency } = useAuth()
 
+  const defaults = getDefaultDateRange()
   const filters = {
-    startDate: searchParams.get('startDate') || format(startOfMonth(new Date()), 'yyyy-MM-dd'),
-    endDate: searchParams.get('endDate') || format(endOfMonth(new Date()), 'yyyy-MM-dd'),
+    startDate: searchParams.get('startDate') || defaults.startDate,
+    endDate: searchParams.get('endDate') || defaults.endDate,
     accountId: searchParams.get('accountId') || '',
     categoryId: searchParams.get('categoryId') || '',
     type: (searchParams.get('type') as 'income' | 'expense') || '',
@@ -90,9 +100,10 @@ const TransactionsPage: React.FC = () => {
   }
 
   const handleFilter = (newFilters: TransactionFilterValues) => {
+    const defaults = getDefaultDateRange()
     const params: Record<string, string> = {
-      startDate: newFilters.startDate || format(startOfMonth(new Date()), 'yyyy-MM-dd'),
-      endDate: newFilters.endDate || format(endOfMonth(new Date()), 'yyyy-MM-dd')
+      startDate: newFilters.startDate || defaults.startDate,
+      endDate: newFilters.endDate || defaults.endDate
     }
 
     if (newFilters.accountId) params.accountId = newFilters.accountId
@@ -104,10 +115,7 @@ const TransactionsPage: React.FC = () => {
   }
 
   const handleResetFilters = () => {
-    setSearchParams({
-      startDate: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
-      endDate: format(endOfMonth(new Date()), 'yyyy-MM-dd')
-    })
+    setSearchParams(getDefaultDateRange())
   }
 
   return (
