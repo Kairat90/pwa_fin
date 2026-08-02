@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { getErrorMessage } from '../api/supabase'
-import { createAndExportBackup } from '../utils/backupExport'
+import { createAndExportBackup, getBackupSuccessMessage } from '../utils/backupExport'
 import {
   getBackupSettings,
   isBackupDue,
@@ -57,11 +57,7 @@ export function useBackupScheduler(isAuthenticated: boolean) {
       try {
         setBackupLoading(true)
         const method = await createAndExportBackup()
-        toast.success(
-          method === 'share'
-            ? 'Автобэкап готов — выберите, куда сохранить'
-            : 'Автобэкап сохранён в файл'
-        )
+        toast.success(getBackupSuccessMessage(method, true))
         sessionStorage.removeItem(SESSION_DISMISS_KEY)
         setShowReminder(false)
       } catch (error: unknown) {
@@ -90,9 +86,7 @@ export function useBackupScheduler(isAuthenticated: boolean) {
       setBackupLoading(true)
       const method = await createAndExportBackup()
       sessionStorage.removeItem(SESSION_DISMISS_KEY)
-      toast.success(
-        method === 'share' ? 'Бэкап готов — выберите приложение для сохранения' : 'Бэкап сохранён'
-      )
+      toast.success(getBackupSuccessMessage(method))
       setShowReminder(false)
     } catch (error: unknown) {
       if (error instanceof Error && error.name === 'AbortError') {

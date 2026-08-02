@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
-import { User, Lock, Trash2, AlertTriangle, Moon, Save } from 'lucide-react'
+import { User, Lock, Trash2, AlertTriangle, Moon, Save, FolderOpen } from 'lucide-react'
 import { supabaseApi, getErrorMessage } from '../api/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
@@ -23,7 +23,13 @@ import {
   BACKUP_INTERVAL_DAYS,
   type BackupScheduleSettings
 } from '../utils/backupSchedule'
-import { createAndExportBackup } from '../utils/backupExport'
+import { createAndExportBackup, getBackupSuccessMessage } from '../utils/backupExport'
+import {
+  clearBackupFolder,
+  getBackupFolderName,
+  isBackupFolderPickerSupported,
+  pickBackupFolder
+} from '../utils/backupFolder'
 
 const profileSchema = z.object({
   name: z.string().min(1, 'Введите имя').max(100, 'Слишком длинное имя'),
@@ -53,6 +59,9 @@ const SettingsPage: React.FC = () => {
   const [backupSettings, setBackupSettings] = useState<BackupScheduleSettings>(() => getBackupSettings())
   const [backupLoading, setBackupLoading] = useState(false)
   const [lastBackupLabel, setLastBackupLabel] = useState(formatLastBackupLabel())
+  const [backupFolderName, setBackupFolderName] = useState<string | null>(() => getBackupFolderName())
+  const [folderPickerLoading, setFolderPickerLoading] = useState(false)
+  const canPickBackupFolder = isBackupFolderPickerSupported()
 
   const profileForm = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -108,11 +117,7 @@ const SettingsPage: React.FC = () => {
       setBackupLoading(true)
       const method = await createAndExportBackup()
       setLastBackupLabel(formatLastBackupLabel())
-      toast.success(
-        method === 'share'
-          ? 'Бэкап готов — выберите приложение для сохранения'
-          : 'Бэкап сохранён в файл'
-      )
+      toast.success(getBackupSuccessMessage(method))
     } catch (error: unknown) {
       if (error instanceof Error && error.name === 'AbortError') {
         return
@@ -121,6 +126,33 @@ const SettingsPage: React.FC = () => {
       toast.error(getErrorMessage(error) || 'Ошибка создания бэкапа')
     } finally {
       setBackupLoading(false)
+    }
+  }
+
+  const onPickBackupFolder = async () => {
+    try {
+      setFolderPickerLoading(true)
+      const name = await pickBackupFolder()
+      setBackupFolderName(name)
+      toast.success(`Папка выбрана: ${name}`)
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        return
+      }
+
+      toast.error(getErrorMessage(error) || 'Не удалось выбрать папку')
+    } finally {
+      setFolderPickerLoading(false)
+    }
+  }
+
+  const onClearBackupFolder = async () => {
+    try {
+      await clearBackupFolder()
+      setBackupFolderName(null)
+      toast.success('Папка сброшена — бэкапы снова пойдут в загрузки')
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error) || 'Не удалось сбросить папку')
     }
   }
 
@@ -279,6 +311,38 @@ const SettingsPage: React.FC = () => {
               </span>
             </span>
           </label>
+
+          {canPickBackupFolder && (
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-3">
+              <div className="flex items-start gap-2">
+                <FolderOpen className={`${ICON_16} text-gray-500 mt-0.5 shrink-0`} />
+                <div className="min-w-0">
+                  <p className="font-medium text-gray-900 dark:text-gray-100">Папка сохранения</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {backupFolderName
+                      ? `Выбрано: ${backupFolderName}`
+                      : 'Не выбрана — файл уйдёт в загрузки браузера'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  loading={folderPickerLoading}
+                  onClick={() => void onPickBackupFolder()}
+                >
+                  Выбрать папку
+                </Button>
+                {backupFolderName && (
+                  <Button type="button" variant="outline" onClick={() => void onClearBackupFolder()}>
+                    Сбросить
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
           <Button type="button" variant="outline" loading={backupLoading} onClick={() => void onCreateBackupNow()}>
             Создать бэкап сейчас
           </Button>

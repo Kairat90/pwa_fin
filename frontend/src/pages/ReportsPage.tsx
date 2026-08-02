@@ -27,7 +27,7 @@ import { Card } from '../components/ui/Card'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { cn } from '../utils/cn'
 import { MAX_BACKUP_FILE_BYTES } from '../utils/restoreBackup'
-import { createAndExportBackup } from '../utils/backupExport'
+import { createAndExportBackup, getBackupSuccessMessage } from '../utils/backupExport'
 import { formatLastBackupLabel } from '../utils/backupSchedule'
 
 const ReportsPage: React.FC = () => {
@@ -116,11 +116,7 @@ const ReportsPage: React.FC = () => {
     try {
       setBackupLoading(true)
       const method = await createAndExportBackup()
-      toast.success(
-        method === 'share'
-          ? 'Бэкап готов — выберите приложение для сохранения'
-          : 'Бэкап сохранён в файл'
-      )
+      toast.success(getBackupSuccessMessage(method))
     } catch (error: unknown) {
       if (error instanceof Error && error.name === 'AbortError') {
         return
