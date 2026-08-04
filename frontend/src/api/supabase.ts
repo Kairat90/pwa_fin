@@ -17,6 +17,7 @@ import { normalizeCategory } from '../utils/categoryTree'
 import { buildIlikeOrFilter, buildUuidEqOrFilter } from '../utils/postgrestFilter'
 import { restoreBackupData, validateBackup } from '../utils/restoreBackup'
 import { addDays, endOfDay } from 'date-fns'
+import { toExclusiveEndDate } from '../utils/date'
 import { buildContactHistory, ContactHistoryData, ContactCurrencySummary, ContactPaymentEntry } from '../utils/contactHistory'
 import { computeDebtStats, type DebtStats } from '../utils/debtStats'
 
@@ -584,7 +585,7 @@ export const supabaseApi = {
         .order('date', { ascending: false })
 
       if (filters?.startDate) query = query.gte('date', filters.startDate)
-      if (filters?.endDate) query = query.lte('date', filters.endDate)
+      if (filters?.endDate) query = query.lt('date', toExclusiveEndDate(filters.endDate))
       if (filters?.accountId) query = query.eq('account_id', filters.accountId)
       if (filters?.categoryId) query = query.eq('category_id', filters.categoryId)
       if (filters?.type === 'income') query = query.gt('amount', 0)
@@ -640,7 +641,7 @@ export const supabaseApi = {
         .from('transactions')
         .select('*, account:accounts(*), category:categories(*)')
         .gte('date', startDate)
-        .lte('date', endDate)
+        .lt('date', toExclusiveEndDate(endDate))
         .order('date', { ascending: false })
         .limit(5000)
 
@@ -725,7 +726,7 @@ export const supabaseApi = {
         .order('date', { ascending: false })
 
       if (filters?.startDate) query = query.gte('date', filters.startDate)
-      if (filters?.endDate) query = query.lte('date', filters.endDate)
+      if (filters?.endDate) query = query.lt('date', toExclusiveEndDate(filters.endDate))
       if (filters?.accountId) {
         query = query.or(buildUuidEqOrFilter('from_account_id', 'to_account_id', filters.accountId))
       }

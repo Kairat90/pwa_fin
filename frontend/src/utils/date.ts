@@ -1,4 +1,4 @@
-import { format, parseISO, startOfMonth, endOfMonth, subMonths } from 'date-fns'
+import { format, parseISO, startOfMonth, endOfMonth, subMonths, addDays } from 'date-fns'
 import { ru } from 'date-fns/locale'
 
 export function formatDate(date: string | Date, pattern = 'dd.MM.yyyy'): string {
@@ -8,6 +8,14 @@ export function formatDate(date: string | Date, pattern = 'dd.MM.yyyy'): string 
 
 export function formatDateTime(date: string | Date): string {
   return formatDate(date, 'dd.MM.yyyy HH:mm')
+}
+
+/**
+ * Верхняя граница периода для TIMESTAMPTZ: день endDate (yyyy-MM-dd) включительно.
+ * Использовать с `.lt('date', …)` — иначе `lte` с датой без времени отсекает весь день окончания.
+ */
+export function toExclusiveEndDate(endDate: string): string {
+  return format(addDays(parseISO(endDate), 1), 'yyyy-MM-dd')
 }
 
 export function getCurrentMonthRange() {
