@@ -30,6 +30,7 @@ import {
   isBackupFolderPickerSupported,
   pickBackupFolder
 } from '../utils/backupFolder'
+import { SessionsSettingsCard } from '../components/settings/SessionsSettingsCard'
 
 const profileSchema = z.object({
   name: z.string().min(1, 'Введите имя').max(100, 'Слишком длинное имя'),
@@ -269,6 +270,8 @@ const SettingsPage: React.FC = () => {
           <Button type="submit" variant="secondary" loading={passwordLoading}>Изменить пароль</Button>
         </form>
       </Card>
+
+      <SessionsSettingsCard />
 
       <Card>
         <div className="flex items-center gap-2 mb-4">

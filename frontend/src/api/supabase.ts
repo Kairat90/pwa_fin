@@ -109,6 +109,16 @@ export interface CategoryBreakdown {
   count: number
 }
 
+export interface AuthSessionRow {
+  id: string
+  createdAt: string
+  updatedAt: string
+  refreshedAt: string | null
+  userAgent: string | null
+  ip: string | null
+  isCurrent: boolean
+}
+
 export interface BalanceHistory {
   date: string
   balance: number
@@ -263,9 +273,38 @@ export const supabaseApi = {
       return data
     },
 
-    signOut: async () => {
-      const { error } = await supabase.auth.signOut()
+    signOut: async (scope: 'local' | 'global' | 'others' = 'local') => {
+      const { error } = await supabase.auth.signOut({ scope })
       if (error) throw new Error(error.message)
+    },
+
+    /** Активные сеансы текущего пользователя */
+    listSessions: async (): Promise<AuthSessionRow[]> => {
+      const { data, error } = await supabase.rpc('list_my_sessions')
+      if (error) throw new Error(error.message)
+
+      return (data ?? []).map((row: Record<string, unknown>) => ({
+        id: String(row.id),
+        createdAt: String(row.created_at),
+        updatedAt: String(row.updated_at),
+        refreshedAt: row.refreshed_at ? String(row.refreshed_at) : null,
+        userAgent: row.user_agent ? String(row.user_agent) : null,
+        ip: row.ip ? String(row.ip) : null,
+        isCurrent: Boolean(row.is_current)
+      }))
+    },
+
+    /** Завершить чужой сеанс */
+    revokeSession: async (sessionId: string): Promise<void> => {
+      const { error } = await supabase.rpc('revoke_my_session', { p_session_id: sessionId })
+      if (error) throw new Error(error.message)
+    },
+
+    /** Выйти со всех устройств, кроме текущего */
+    revokeOtherSessions: async (): Promise<number> => {
+      const { data, error } = await supabase.rpc('revoke_other_sessions')
+      if (error) throw new Error(error.message)
+      return typeof data === 'number' ? data : Number(data ?? 0)
     },
 
     getUser: () => supabase.auth.getUser(),
@@ -384,7 +423,7 @@ export const supabaseApi = {
     deleteAccount: async (): Promise<void> => {
       const { error } = await supabase.rpc('delete_own_account')
       if (error) throw new Error(error.message)
-      await supabase.auth.signOut()
+      await supabase.auth.signOut({ scope: 'global' })
     },
 
     /** Создаёт профиль и категории для уже известного auth-user (без лишнего getUser) */
