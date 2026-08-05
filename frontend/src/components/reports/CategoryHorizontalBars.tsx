@@ -7,6 +7,7 @@ interface CategoryHorizontalBarsProps {
   data: CategoryBreakdown[]
   type: 'income' | 'expense'
   currency?: string
+  onCategoryClick?: (item: CategoryBreakdown) => void
 }
 
 const BAR_COLORS = {
@@ -18,9 +19,11 @@ const BAR_COLORS = {
 export const CategoryHorizontalBars: React.FC<CategoryHorizontalBarsProps> = ({
   data,
   type,
-  currency = 'KZT'
+  currency = 'KZT',
+  onCategoryClick
 }) => {
   const barColor = BAR_COLORS[type]
+  const clickable = Boolean(onCategoryClick)
 
   if (data.length === 0) {
     return (
@@ -36,8 +39,8 @@ export const CategoryHorizontalBars: React.FC<CategoryHorizontalBarsProps> = ({
         const width = Math.max(item.percentage, item.percentage > 0 ? 4 : 0)
         const showPercentInside = item.percentage >= 12
 
-        return (
-          <div key={item.id}>
+        const content = (
+          <>
             <div className="flex items-center justify-between gap-3 mb-1.5">
               <div className="flex items-center gap-2 min-w-0">
                 <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
@@ -45,10 +48,12 @@ export const CategoryHorizontalBars: React.FC<CategoryHorizontalBarsProps> = ({
                 </span>
                 <span className="text-xs text-gray-400 shrink-0">({item.count})</span>
               </div>
-              <span className={cn(
-                'text-sm font-semibold tabular-nums shrink-0',
-                type === 'income' ? 'text-green-600' : 'text-red-600'
-              )}>
+              <span
+                className={cn(
+                  'text-sm font-semibold tabular-nums shrink-0',
+                  type === 'income' ? 'text-green-600' : 'text-red-600'
+                )}
+              >
                 {formatCurrency(item.amount, currency)}
               </span>
             </div>
@@ -70,10 +75,24 @@ export const CategoryHorizontalBars: React.FC<CategoryHorizontalBarsProps> = ({
                 </span>
               )}
             </div>
-          </div>
+          </>
+        )
+
+        if (!clickable) {
+          return <div key={item.id}>{content}</div>
+        }
+
+        return (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => onCategoryClick?.(item)}
+            className="w-full text-left rounded-xl p-1 -m-1 hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+          >
+            {content}
+          </button>
         )
       })}
     </div>
   )
 }
-

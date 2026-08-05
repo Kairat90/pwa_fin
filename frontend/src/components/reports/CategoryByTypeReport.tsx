@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { supabaseApi } from '../../api/supabase'
+import { CategoryBreakdown, supabaseApi } from '../../api/supabase'
 import { Account } from '../../types'
 import { buildCategoryBreakdown } from '../../utils/categoryBreakdownReport'
 import { DEFAULT_CURRENCY, formatCurrency, normalizeCurrency } from '../../utils/currency'
@@ -8,6 +8,7 @@ import { formatReportDateRange, getReportDateRange } from '../../utils/reportPer
 import { Card } from '../ui/Card'
 import { LoadingSpinner } from '../common/LoadingSpinner'
 import { CategoryHorizontalBars } from './CategoryHorizontalBars'
+import { CategoryTransactionsModal } from './CategoryTransactionsModal'
 import { ReportDateRangeRow } from './ReportDateRangeRow'
 import {
   formatReportPeriodHint,
@@ -36,9 +37,11 @@ function getDefaultReportFilters(accounts: Account[]): ReportFiltersState {
   }
 }
 
-/** Отчёт по категориям с фильтрами и горизонтальной диаграммой */export const CategoryByTypeReport: React.FC<CategoryByTypeReportProps> = ({ type }) => {
+/** Отчёт по категориям с фильтрами и горизонтальной диаграммой */
+export const CategoryByTypeReport: React.FC<CategoryByTypeReportProps> = ({ type }) => {
   const [filters, setFilters] = useState<ReportFiltersState | null>(null)
   const [defaultsApplied, setDefaultsApplied] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState<CategoryBreakdown | null>(null)
 
   const { data: accounts = [], isLoading: accountsLoading } = useQuery({
     queryKey: ['accounts'],
@@ -110,55 +113,67 @@ function getDefaultReportFilters(accounts: Account[]): ReportFiltersState {
   }
 
   return (
-    <Card>
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-6">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {periodHint} · {DEFAULT_CURRENCY}
-            {isFetching && !transactionsLoading && (
-              <span className="ml-2 text-primary-500">обновление…</span>
-            )}
-          </p>
+    <>
+      <Card>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-6">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {periodHint} · {DEFAULT_CURRENCY}
+              {isFetching && !transactionsLoading && (
+                <span className="ml-2 text-primary-500">обновление…</span>
+              )}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Итого</p>
+            <p className={`text-xl font-bold tabular-nums ${type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+              {formatCurrency(total, DEFAULT_CURRENCY)}
+            </p>
+          </div>
         </div>
-        <div className="text-right">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Итого</p>
-          <p className={`text-xl font-bold tabular-nums ${type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-            {formatCurrency(total, DEFAULT_CURRENCY)}
-          </p>
+
+        <div className="mb-6 pb-6 border-b border-gray-100 dark:border-gray-800">
+          <ReportFiltersBar
+            filters={filters}
+            accounts={accounts}
+            onChange={setFilters}
+            onReset={handleReset}
+            currencyLabel={DEFAULT_CURRENCY}
+          />
         </div>
-      </div>
 
-      <div className="mb-6 pb-6 border-b border-gray-100 dark:border-gray-800">
-        <ReportFiltersBar
-          filters={filters}
-          accounts={accounts}
-          onChange={setFilters}
-          onReset={handleReset}
-          currencyLabel={DEFAULT_CURRENCY}
-        />
-      </div>
+        {filters.period === 'custom' && (
+          <ReportDateRangeRow
+            className="md:hidden mb-6 min-w-0"
+            customStart={filters.customStart}
+            customEnd={filters.customEnd}
+            onChange={handleDateRangeChange}
+          />
+        )}
 
-      {filters.period === 'custom' && (
-        <ReportDateRangeRow
-          className="md:hidden mb-6 min-w-0"
-          customStart={filters.customStart}
-          customEnd={filters.customEnd}
-          onChange={handleDateRangeChange}
-        />
-      )}
+        {transactionsLoading ? (
+          <div className="flex items-center justify-center h-40">
+            <LoadingSpinner />
+          </div>
+        ) : (
+          <CategoryHorizontalBars
+            data={breakdown}
+            type={type}
+            currency={DEFAULT_CURRENCY}
+            onCategoryClick={setSelectedCategory}
+          />
+        )}
+      </Card>
 
-      {transactionsLoading ? (
-        <div className="flex items-center justify-center h-40">
-          <LoadingSpinner />
-        </div>
-      ) : (
-        <CategoryHorizontalBars
-          data={breakdown}
-          type={type}
-          currency={DEFAULT_CURRENCY}
-        />
-      )}
-    </Card>
+      <CategoryTransactionsModal
+        isOpen={Boolean(selectedCategory)}
+        onClose={() => setSelectedCategory(null)}
+        category={selectedCategory}
+        transactions={transactions}
+        type={type}
+        currency={DEFAULT_CURRENCY}
+      />
+    </>
   )
 }

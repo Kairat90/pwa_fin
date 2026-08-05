@@ -1,12 +1,14 @@
+import { format, parseISO } from 'date-fns'
+import { ru } from 'date-fns/locale'
 import { CategoryBreakdown } from '../api/supabase'
 import { Transaction } from '../types'
 
-/** Агрегация транзакций по категориям (логика как в get_category_breakdown) */
-export function buildCategoryBreakdown(
+/** Транзакции, попадающие в отчёт по типу (как в get_category_breakdown) */
+export function filterTransactionsByReportType(
   transactions: Transaction[],
   type: 'income' | 'expense'
-): CategoryBreakdown[] {
-  const filtered = transactions.filter((t) => {
+): Transaction[] {
+  return transactions.filter((t) => {
     if (t.isExcludedFromBudget) {
       return false
     }
@@ -27,7 +29,14 @@ export function buildCategoryBreakdown(
 
     return !category || category.type === 'expense'
   })
+}
 
+/** Агрегация транзакций по категориям (логика как в get_category_breakdown) */
+export function buildCategoryBreakdown(
+  transactions: Transaction[],
+  type: 'income' | 'expense'
+): CategoryBreakdown[] {
+  const filtered = filterTransactionsByReportType(transactions, type)
   const byCategory = new Map<string, Omit<CategoryBreakdown, 'percentage'>>()
 
   for (const transaction of filtered) {
@@ -54,4 +63,49 @@ export function buildCategoryBreakdown(
     ...item,
     percentage: total > 0 ? (item.amount / total) * 100 : 0
   }))
+}
+
+/** Транзакции одной категории в рамках отчёта */
+export function getTransactionsForCategory(
+  transactions: Transaction[],
+  type: 'income' | 'expense',
+  categoryId: string
+): Transaction[] {
+  return filterTransactionsByReportType(transactions, type)
+    .filter((t) => (t.category?.id ?? 'uncategorized') === categoryId)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+}
+
+export type TransactionDateGroup = {
+  dateKey: string
+  label: string
+  items: Transaction[]
+  total: number
+}
+
+/** Группировка транзакций по календарному дню (новые даты сверху) */
+export function groupTransactionsByDate(transactions: Transaction[]): TransactionDateGroup[] {
+  const map = new Map<string, Transaction[]>()
+
+  for (const transaction of transactions) {
+    const dateKey = format(parseISO(transaction.date), 'yyyy-MM-dd')
+    const list = map.get(dateKey) ?? []
+    list.push(transaction)
+    map.set(dateKey, list)
+  }
+
+  return Array.from(map.entries())
+    .sort(([a], [b]) => (a < b ? 1 : a > b ? -1 : 0))
+    .map(([dateKey, items]) => {
+      const sorted = [...items].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      )
+
+      return {
+        dateKey,
+        label: format(parseISO(dateKey), 'd MMMM yyyy', { locale: ru }),
+        items: sorted,
+        total: sorted.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0)
+      }
+    })
 }
