@@ -10,6 +10,7 @@ import {
   ReportPeriodPreset
 } from '../../utils/reportPeriod'
 import { Button } from '../ui/Button'
+import { DateInput } from '../ui/DateInput'
 import { ReportAccountsModal } from './ReportAccountsModal'
 
 export type ReportFiltersState = {
@@ -294,18 +295,16 @@ export const ReportFiltersBar: React.FC<ReportFiltersBarProps> = ({
         {filters.period === 'custom' && (
           <div className="flex flex-wrap items-end gap-3">
             <div>
-              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">С</label>
-              <input
-                type="date"
+              <DateInput
+                label="С"
                 value={filters.customStart}
                 onChange={(e) => onChange({ ...filters, customStart: e.target.value })}
                 className="rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 px-3 py-2 text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">По</label>
-              <input
-                type="date"
+              <DateInput
+                label="По"
                 value={filters.customEnd}
                 onChange={(e) => onChange({ ...filters, customEnd: e.target.value })}
                 className="rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 px-3 py-2 text-sm"

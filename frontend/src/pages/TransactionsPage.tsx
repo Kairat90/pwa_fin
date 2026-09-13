@@ -3,16 +3,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Plus } from 'lucide-react'
-import { format, subDays } from 'date-fns'
-
-/** Период по умолчанию: последние 10 дней по текущую дату */
-function getDefaultDateRange() {
-  const end = new Date()
-  return {
-    startDate: format(subDays(end, 10), 'yyyy-MM-dd'),
-    endDate: format(end, 'yyyy-MM-dd')
-  }
-}
 import { supabaseApi, getErrorMessage } from '../api/supabase'
 import { useAuth } from '../context/AuthContext'
 import { Transaction } from '../types'
@@ -32,10 +22,9 @@ const TransactionsPage: React.FC = () => {
   const queryClient = useQueryClient()
   const { defaultAccountId, defaultCurrency } = useAuth()
 
-  const defaults = getDefaultDateRange()
   const filters = {
-    startDate: searchParams.get('startDate') || defaults.startDate,
-    endDate: searchParams.get('endDate') || defaults.endDate,
+    startDate: searchParams.get('startDate') || '',
+    endDate: searchParams.get('endDate') || '',
     accountId: searchParams.get('accountId') || '',
     categoryId: searchParams.get('categoryId') || '',
     type: (searchParams.get('type') as 'income' | 'expense') || '',
@@ -44,14 +33,17 @@ const TransactionsPage: React.FC = () => {
 
   const { data: transactionsData, isLoading } = useQuery({
     queryKey: ['transactions', filters],
-    queryFn: () => supabaseApi.transactions.getAll({
-      startDate: filters.startDate,
-      endDate: filters.endDate,
-      accountId: filters.accountId || undefined,
-      categoryId: filters.categoryId || undefined,
-      type: filters.type || undefined,
-      search: filters.search || undefined
-    })
+    queryFn: () =>
+      supabaseApi.transactions.getAll({
+        startDate: filters.startDate || undefined,
+        endDate: filters.endDate || undefined,
+        accountId: filters.accountId || undefined,
+        categoryId: filters.categoryId || undefined,
+        type: filters.type || undefined,
+        search: filters.search || undefined,
+        // Без дат и с поиском — шире выборка, чтобы искать по всем операциям
+        limit: filters.search && !filters.startDate && !filters.endDate ? 5000 : undefined
+      })
   })
 
   const { data: accounts } = useQuery({
@@ -100,12 +92,10 @@ const TransactionsPage: React.FC = () => {
   }
 
   const handleFilter = (newFilters: TransactionFilterValues) => {
-    const defaults = getDefaultDateRange()
-    const params: Record<string, string> = {
-      startDate: newFilters.startDate || defaults.startDate,
-      endDate: newFilters.endDate || defaults.endDate
-    }
+    const params: Record<string, string> = {}
 
+    if (newFilters.startDate) params.startDate = newFilters.startDate
+    if (newFilters.endDate) params.endDate = newFilters.endDate
     if (newFilters.accountId) params.accountId = newFilters.accountId
     if (newFilters.categoryId) params.categoryId = newFilters.categoryId
     if (newFilters.type) params.type = newFilters.type
@@ -115,7 +105,7 @@ const TransactionsPage: React.FC = () => {
   }
 
   const handleResetFilters = () => {
-    setSearchParams(getDefaultDateRange())
+    setSearchParams({})
   }
 
   return (
@@ -125,53 +115,60 @@ const TransactionsPage: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Транзакции</h1>
           <p className="text-gray-500 text-sm">
             {transactionsData?.data?.length || 0} транзакций
+            {!filters.startDate && !filters.endDate ? ' · все периоды' : ''}
           </p>
         </div>
         <div className="flex gap-2">
           <Button
             onClick={() => {
+              setFormType('income')
               setEditingTransaction(null)
               setRepeatSource(null)
-              setFormType('expense')
               setShowForm(true)
             }}
-            className="bg-red-600 hover:bg-red-700"
+            variant="secondary"
+            className="flex items-center gap-1"
           >
-            <Plus className="w-4 h-4 mr-1" />
-            Расход
+            <Plus className="w-4 h-4" />
+            Доход
           </Button>
           <Button
             onClick={() => {
+              setFormType('expense')
               setEditingTransaction(null)
               setRepeatSource(null)
-              setFormType('income')
               setShowForm(true)
             }}
-            className="bg-green-600 hover:bg-green-700"
+            className="flex items-center gap-1"
           >
-            <Plus className="w-4 h-4 mr-1" />
-            Доход
+            <Plus className="w-4 h-4" />
+            Расход
           </Button>
         </div>
       </div>
 
-      {accounts && categories && (
-        <TransactionFilters
-          accounts={accounts}
-          categories={categories}
-          onFilter={handleFilter}
-          onReset={handleResetFilters}
-          initialFilters={filters}
+      <TransactionFilters
+        accounts={accounts || []}
+        categories={categories || []}
+        onFilter={handleFilter}
+        onReset={handleResetFilters}
+        initialFilters={filters}
+      />
+
+      {isLoading ? (
+        <div className="text-center py-12 text-gray-500">Загрузка...</div>
+      ) : (
+        <TransactionList
+          transactions={transactionsData?.data || []}
+          onEdit={handleEdit}
+          onRepeat={handleRepeat}
+          onDelete={(id) => {
+            if (window.confirm('Удалить транзакцию?')) {
+              deleteMutation.mutate(id)
+            }
+          }}
         />
       )}
-
-      <TransactionList
-        transactions={transactionsData?.data || []}
-        onEdit={handleEdit}
-        onDelete={deleteMutation.mutate}
-        onRepeat={handleRepeat}
-        loading={isLoading}
-      />
 
       <TransactionForm
         isOpen={showForm}
@@ -181,9 +178,9 @@ const TransactionsPage: React.FC = () => {
           setRepeatSource(null)
         }}
         onSuccess={handleFormSuccess}
+        transaction={editingTransaction}
+        repeatSource={repeatSource}
         type={formType}
-        transaction={editingTransaction || undefined}
-        repeatSource={repeatSource || undefined}
         defaultAccountId={defaultAccount?.id}
       />
     </div>

@@ -4,6 +4,7 @@ import { Account, Category } from '../../types'
 import { Button } from '../ui/Button'
 import { SearchField } from '../common/SearchField'
 import { getAccountOptionLabel } from '../../utils/accountIcons'
+import { DateInput } from '../ui/DateInput'
 
 export interface TransactionFilterValues {
   search?: string
@@ -182,22 +183,23 @@ export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Период</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Период (необязательно)</label>
               <div className="flex gap-2">
-                <input
-                  type="date"
+                <DateInput
                   value={filters.startDate}
                   onChange={(e) => handleChange('startDate', e.target.value)}
-                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="flex-1"
                 />
                 <span className="text-gray-400 self-center">—</span>
-                <input
-                  type="date"
+                <DateInput
                   value={filters.endDate}
                   onChange={(e) => handleChange('endDate', e.target.value)}
-                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="flex-1"
                 />
               </div>
+              <p className="mt-1 text-xs text-gray-400">
+                Без дат поиск и список идут по всем транзакциям
+              </p>
             </div>
           </div>
 

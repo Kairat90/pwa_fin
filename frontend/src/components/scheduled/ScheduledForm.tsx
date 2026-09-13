@@ -12,6 +12,7 @@ import { toDateInputValue } from '../../utils/dateInput'
 import { optionalScheduledDateToIso, scheduledDateToIso } from '../../utils/scheduleDate'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
+import { DateInput } from '../ui/DateInput'
 import { Modal } from '../ui/Modal'
 
 const scheduledSchema = z.object({
@@ -297,26 +298,15 @@ export const ScheduledForm: React.FC<ScheduledFormProps> = ({
           )}
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Дата первого выполнения</label>
-              <input
-                type="date"
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                {...register('startDate')}
-              />
-              {errors.startDate && (
-                <p className="mt-1 text-sm text-red-600">{errors.startDate.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Дата окончания (опционально)</label>
-              <input
-                type="date"
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                {...register('endDate')}
-              />
-            </div>
+            <DateInput
+              label="Дата первого выполнения"
+              error={errors.startDate?.message}
+              {...register('startDate')}
+            />
+            <DateInput
+              label="Дата окончания (опционально)"
+              {...register('endDate')}
+            />
           </div>
 
           <Input

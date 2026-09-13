@@ -10,6 +10,7 @@ import { formatCurrency, normalizeCurrency } from '../../utils/currency'
 import { dateInputToIso, toDateInputValue } from '../../utils/dateInput'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
+import { DateInput } from '../ui/DateInput'
 import { Modal } from '../ui/Modal'
 
 const entrySchema = z.object({
@@ -229,15 +230,11 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
           {...register('amount')}
         />
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Дата</label>
-          <input
-            type="date"
-            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
-            {...register('date')}
-          />
-          {errors.date && <p className="mt-1 text-sm text-red-600">{errors.date.message}</p>}
-        </div>
+        <DateInput
+          label="Дата"
+          error={errors.date?.message}
+          {...register('date')}
+        />
 
         <Input
           label="Примечание (опционально)"

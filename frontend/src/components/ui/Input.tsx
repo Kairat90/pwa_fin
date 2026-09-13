@@ -1,14 +1,41 @@
-import React from 'react'
+import React, { useCallback } from 'react'
 import { cn } from '../../utils/cn'
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string
   error?: string
   icon?: React.ReactNode
+  /** При фокусе очищать значение 0 / 0.00 (по умолчанию для type=number) */
+  clearZeroOnFocus?: boolean
+}
+
+function isZeroLike(value: string): boolean {
+  if (!value.trim()) {
+    return false
+  }
+
+  const normalized = value.replace(',', '.')
+  const num = Number(normalized)
+
+  return Number.isFinite(num) && num === 0
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, icon, className, ...props }, ref) => {
+  ({ label, error, icon, className, clearZeroOnFocus, onFocus, type, ...props }, ref) => {
+    const shouldClearZero = clearZeroOnFocus ?? type === 'number'
+
+    const handleFocus = useCallback(
+      (event: React.FocusEvent<HTMLInputElement>) => {
+        if (shouldClearZero && isZeroLike(event.currentTarget.value)) {
+          event.currentTarget.value = ''
+          event.currentTarget.dispatchEvent(new Event('input', { bubbles: true }))
+        }
+
+        onFocus?.(event)
+      },
+      [onFocus, shouldClearZero]
+    )
+
     return (
       <div className="w-full">
         {label && (
@@ -24,6 +51,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           )}
           <input
             ref={ref}
+            type={type}
             className={cn(
               'w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2.5',
               'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100',
@@ -35,6 +63,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
               className
             )}
             {...props}
+            onFocus={handleFocus}
           />
         </div>
         {error && (

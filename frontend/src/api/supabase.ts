@@ -636,7 +636,8 @@ export const supabaseApi = {
       // Поиск по примечанию и тегам — фильтрация на клиенте (теги — массив, ilike в PostgREST неудобен)
       if (filters?.search?.trim()) {
         const term = filters.search.trim().toLowerCase()
-        const { data, error } = await query.limit(2000)
+        const fetchLimit = Math.max(limit, 2000)
+        const { data, error } = await query.limit(fetchLimit)
 
         if (error) throw new Error(error.message)
 
@@ -794,7 +795,7 @@ export const supabaseApi = {
     },
 
     delete: async (id: string): Promise<void> => {
-      const { error } = await supabase.from('transfers').delete().eq('id', id)
+      const { error } = await supabase.rpc('cancel_transfer', { p_transfer_id: id })
       if (error) throw new Error(error.message)
     }
   },

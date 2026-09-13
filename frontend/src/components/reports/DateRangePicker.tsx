@@ -3,6 +3,7 @@ import { format, subDays, subMonths, startOfMonth, endOfMonth } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { Calendar, ChevronDown } from 'lucide-react'
 import { Button } from '../ui/Button'
+import { DateInput } from '../ui/DateInput'
 
 interface DateRangePickerProps {
   startDate: Date
@@ -79,24 +80,18 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
 
             <div className="border-t border-gray-200 pt-3">
               <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs text-gray-500">С</label>
-                  <input
-                    type="date"
-                    value={localStart}
-                    onChange={(e) => setLocalStart(e.target.value)}
-                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500">По</label>
-                  <input
-                    type="date"
-                    value={localEnd}
-                    onChange={(e) => setLocalEnd(e.target.value)}
-                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
-                </div>
+                <DateInput
+                  label="С"
+                  value={localStart}
+                  onChange={(e) => setLocalStart(e.target.value)}
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+                <DateInput
+                  label="По"
+                  value={localEnd}
+                  onChange={(e) => setLocalEnd(e.target.value)}
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
               </div>
               <Button
                 size="sm"

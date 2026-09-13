@@ -12,6 +12,7 @@ import { buildCategoryTree, flattenCategoryTree, formatCategoryOptionLabel } fro
 import { dateInputToIso, toDateInputValue } from '../../utils/dateInput'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
+import { DateInput } from '../ui/DateInput'
 import { Modal } from '../ui/Modal'
 
 const transactionSchema = z.object({
@@ -226,17 +227,11 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
               error={errors.amount?.message}
               {...register('amount')}
             />
-            <div className="min-w-0">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Дата</label>
-              <input
-                type="date"
-                className="w-full min-w-0 max-w-full box-border rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 sm:px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none"
-                {...register('date')}
-              />
-              {errors.date && (
-                <p className="mt-1 text-sm text-red-600">{errors.date.message}</p>
-              )}
-            </div>
+            <DateInput
+              label="Дата"
+              error={errors.date?.message}
+              {...register('date')}
+            />
           </div>
 
           <Input

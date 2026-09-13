@@ -27,6 +27,7 @@ const TransfersPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transfers'] })
       queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
       toast.success('Перевод отменен')
     },
     onError: (error: unknown) => {

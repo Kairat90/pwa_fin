@@ -1,6 +1,7 @@
 import React from 'react'
 import { Calendar } from 'lucide-react'
 import { cn } from '../../utils/cn'
+import { DateInput } from '../ui/DateInput'
 
 interface ReportDateRangeRowProps {
   customStart: string
@@ -23,22 +24,19 @@ export const ReportDateRangeRow: React.FC<ReportDateRangeRowProps> = ({
     <div
       className={cn(
         'w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-primary-200 dark:border-primary-800',
-        'bg-primary-50/60 dark:bg-primary-900/20 p-3',
+        'bg-primary-50/60 dark:bg-primary-950/30 p-3',
         className
       )}
     >
-      <div className="flex items-center gap-2 mb-2 min-w-0">
-        <Calendar className="w-4 h-4 text-primary-600 dark:text-primary-400 shrink-0" />
-        <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-          Выберите период
-        </span>
+      <div className="flex items-center gap-2 mb-2 text-sm font-medium text-primary-800 dark:text-primary-200">
+        <Calendar className="w-4 h-4 shrink-0" />
+        Произвольный период
       </div>
 
       <div className="flex items-end gap-x-1.5 gap-y-0 w-full">
         <div className="flex-1 flex flex-col min-w-0">
-          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1">С</label>
-          <input
-            type="date"
+          <DateInput
+            label="С"
             value={customStart}
             max={customEnd || undefined}
             onChange={(e) => {
@@ -50,13 +48,11 @@ export const ReportDateRangeRow: React.FC<ReportDateRangeRowProps> = ({
             className={dateFieldClassName}
           />
         </div>
-
         <span className="text-xs text-gray-400 pb-2.5 shrink-0 px-0.5">—</span>
 
         <div className="flex-1 flex flex-col min-w-0">
-          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1">По</label>
-          <input
-            type="date"
+          <DateInput
+            label="По"
             value={customEnd}
             min={customStart || undefined}
             onChange={(e) => onChange(customStart, e.target.value)}
