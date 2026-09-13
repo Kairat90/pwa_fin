@@ -7,6 +7,11 @@ export function compareCategories(a: Category, b: Category): number {
   return a.name.localeCompare(b.name, 'ru')
 }
 
+/** Сравнение только по алфавиту (для фильтров) */
+export function compareCategoriesByName(a: Category, b: Category): number {
+  return a.name.localeCompare(b.name, 'ru')
+}
+
 /** ID всех потомков категории (для предотвращения циклов) */
 export function getDescendantIds(categories: Category[], parentId: string): Set<string> {
   const ids = new Set<string>()
@@ -59,7 +64,10 @@ export function normalizeCategory(cat: Category): Category {
 }
 
 /** Построение дерева из плоского списка */
-export function buildCategoryTree(categories: Category[]): Category[] {
+export function buildCategoryTree(
+  categories: Category[],
+  compare: (a: Category, b: Category) => number = compareCategories
+): Category[] {
   const normalized = categories.map(normalizeCategory)
   const map = new Map<string, Category>()
 
@@ -78,7 +86,7 @@ export function buildCategoryTree(categories: Category[]): Category[] {
   })
 
   const sortNodes = (nodes: Category[]): Category[] => {
-    nodes.sort(compareCategories)
+    nodes.sort(compare)
     nodes.forEach((n) => {
       if (n.children?.length) {
         n.children = sortNodes(n.children)
@@ -93,16 +101,17 @@ export function buildCategoryTree(categories: Category[]): Category[] {
 /** Дерево → плоский список с глубиной вложенности */
 export function flattenCategoryTree(
   nodes: Category[],
-  depth = 0
+  depth = 0,
+  compare: (a: Category, b: Category) => number = compareCategories
 ): Array<Category & { depth: number }> {
   const result: Array<Category & { depth: number }> = []
-  const sorted = [...nodes].sort(compareCategories)
+  const sorted = [...nodes].sort(compare)
 
   for (const node of sorted) {
     result.push({ ...node, depth })
 
     if (node.children?.length) {
-      result.push(...flattenCategoryTree(node.children, depth + 1))
+      result.push(...flattenCategoryTree(node.children, depth + 1, compare))
     }
   }
 

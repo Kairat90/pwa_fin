@@ -1,10 +1,16 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Filter, X } from 'lucide-react'
 import { Account, Category } from '../../types'
 import { Button } from '../ui/Button'
 import { SearchField } from '../common/SearchField'
 import { getAccountOptionLabel } from '../../utils/accountIcons'
 import { DateInput } from '../ui/DateInput'
+import {
+  buildCategoryTree,
+  compareCategoriesByName,
+  flattenCategoryTree,
+  formatCategoryOptionLabel
+} from '../../utils/categoryTree'
 
 export interface TransactionFilterValues {
   search?: string
@@ -21,6 +27,17 @@ interface TransactionFiltersProps {
   onFilter: (filters: TransactionFilterValues) => void
   onReset: () => void
   initialFilters?: TransactionFilterValues
+}
+
+function categoryOptionsForType(categories: Category[], type: 'income' | 'expense') {
+  return flattenCategoryTree(
+    buildCategoryTree(
+      categories.filter((c) => c.type === type),
+      compareCategoriesByName
+    ),
+    0,
+    compareCategoriesByName
+  )
 }
 
 export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
@@ -58,8 +75,47 @@ export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
     initialFilters?.endDate
   ])
 
+  const incomeCategoryOptions = useMemo(
+    () => categoryOptionsForType(categories, 'income'),
+    [categories]
+  )
+
+  const expenseCategoryOptions = useMemo(
+    () => categoryOptionsForType(categories, 'expense'),
+    [categories]
+  )
+
+  const categorySelectOptions = useMemo(() => {
+    if (filters.type === 'income') {
+      return [{ label: null as string | null, options: incomeCategoryOptions }]
+    }
+
+    if (filters.type === 'expense') {
+      return [{ label: null as string | null, options: expenseCategoryOptions }]
+    }
+
+    return [
+      { label: 'Доходы', options: incomeCategoryOptions },
+      { label: 'Расходы', options: expenseCategoryOptions }
+    ]
+  }, [filters.type, incomeCategoryOptions, expenseCategoryOptions])
+
   const handleChange = (key: string, value: string) => {
-    setFilters((prev) => ({ ...prev, [key]: value }))
+    setFilters((prev) => {
+      const next = { ...prev, [key]: value }
+
+      if (key === 'type' && prev.categoryId) {
+        const stillValid = categories.some(
+          (c) => c.id === prev.categoryId && (!value || c.type === value)
+        )
+
+        if (!stillValid) {
+          next.categoryId = ''
+        }
+      }
+
+      return next
+    })
   }
 
   const applyFilters = (searchOverride?: string) => {
@@ -161,11 +217,25 @@ export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
                 className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
                 <option value="">Все категории</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
+                {categorySelectOptions.map((group) =>
+                  group.label ? (
+                    <optgroup key={group.label} label={group.label}>
+                      {group.options.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {formatCategoryOptionLabel(category, category.depth)}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : (
+                    <React.Fragment key={filters.type || 'typed'}>
+                      {group.options.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {formatCategoryOptionLabel(category, category.depth)}
+                        </option>
+                      ))}
+                    </React.Fragment>
+                  )
+                )}
               </select>
             </div>
 
