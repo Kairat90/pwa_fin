@@ -6,7 +6,7 @@ import toast from 'react-hot-toast'
 import { Account, Debt, DebtEntryMode, DebtPayment } from '../../types'
 import { supabaseApi, getErrorMessage } from '../../api/supabase'
 import { getAccountOptionLabel } from '../../utils/accountIcons'
-import { formatCurrency, normalizeCurrency } from '../../utils/currency'
+import { formatCurrency, normalizeCurrency, roundMoney } from '../../utils/currency'
 import { dateInputToIso, toDateInputValue } from '../../utils/dateInput'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
@@ -72,7 +72,7 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
   const isInitialMode = mode === 'initial'
   const hasLinkedTransaction = Boolean(payment?.transactionId)
   const labels = MODE_LABELS[mode]
-  const remainingAmount = debt.remainingAmount ?? Number(debt.amount)
+  const remainingAmount = roundMoney(debt.remainingAmount ?? Number(debt.amount))
 
   const {
     register,
@@ -126,7 +126,7 @@ export const DebtPaymentForm: React.FC<DebtPaymentFormProps> = ({
         reset({
           date: payment ? toDateInputValue(payment.date) : toDateInputValue(),
           createTransaction: !isEdit,
-          amount: payment ? Number(payment.amount) : (mode === 'repayment' ? remainingAmount : 0),
+          amount: payment ? roundMoney(Number(payment.amount)) : (mode === 'repayment' ? remainingAmount : 0),
           note: payment?.note || '',
           accountId
         })

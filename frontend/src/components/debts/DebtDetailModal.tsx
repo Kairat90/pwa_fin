@@ -3,7 +3,7 @@ import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { X, MinusCircle, PlusCircle, Pencil, Trash2 } from 'lucide-react'
 import { Debt, DebtPayment } from '../../types'
-import { formatCurrency } from '../../utils/currency'
+import { formatCurrency, roundMoney } from '../../utils/currency'
 import { cn } from '../../utils/cn'
 import {
   canDeleteDebtPayment,
@@ -36,8 +36,8 @@ export const DebtDetailModal: React.FC<DebtDetailModalProps> = ({
 }) => {
   if (!isOpen || !debt) return null
 
-  const remainingAmount = debt.remainingAmount ?? Number(debt.amount)
-  const paidAmount = debt.paidAmount ?? (Number(debt.amount) - remainingAmount)
+  const remainingAmount = roundMoney(debt.remainingAmount ?? Number(debt.amount))
+  const paidAmount = roundMoney(debt.paidAmount ?? (Number(debt.amount) - remainingAmount))
   const progress = Number(debt.amount) > 0 ? (paidAmount / Number(debt.amount)) * 100 : 0
   const canOperate = debt.status !== 'writtenOff'
   const historyPayments = getDebtHistoryPayments(debt)

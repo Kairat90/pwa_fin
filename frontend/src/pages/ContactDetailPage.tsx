@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import { supabaseApi, getErrorMessage } from '../api/supabase'
 import { Debt, DebtEntryMode, DebtPayment } from '../types'
-import { formatCurrency } from '../utils/currency'
+import { formatCurrency, roundMoney } from '../utils/currency'
 import { cn } from '../utils/cn'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
@@ -33,7 +33,7 @@ const DEBT_STATUS: Record<string, string> = {
 }
 
 function debtRemaining(debt: Debt): number {
-  return Math.max(0, debt.remainingAmount ?? Number(debt.amount))
+  return Math.max(0, roundMoney(debt.remainingAmount ?? Number(debt.amount)))
 }
 
 function paymentEntryLabel(payment: DebtPayment, debtType: Debt['type']): string {

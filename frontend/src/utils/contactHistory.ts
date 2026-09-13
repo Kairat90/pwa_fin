@@ -1,5 +1,5 @@
 import { Debt, DebtPayment } from '../types'
-import { normalizeCurrency } from './currency'
+import { normalizeCurrency, roundMoney } from './currency'
 
 /** Сводка по валютам для контакта */
 export type ContactCurrencySummary = {
@@ -24,7 +24,7 @@ export type ContactHistoryData = {
 }
 
 function debtRemaining(debt: Debt): number {
-  return Math.max(0, debt.remainingAmount ?? Number(debt.amount))
+  return Math.max(0, roundMoney(debt.remainingAmount ?? Number(debt.amount)))
 }
 
 /** Активные долги — для итогов «мне должны / я должен» */

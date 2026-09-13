@@ -1,5 +1,5 @@
 import { Debt } from '../types'
-import { normalizeCurrency } from './currency'
+import { normalizeCurrency, roundMoney } from './currency'
 
 export type DebtStatsByCurrency = {
   currency: string
@@ -19,7 +19,7 @@ export type DebtStats = {
 }
 
 function debtRemaining(debt: Debt): number {
-  return Math.max(0, debt.remainingAmount ?? Number(debt.amount))
+  return Math.max(0, roundMoney(debt.remainingAmount ?? Number(debt.amount)))
 }
 
 /** Сводка по открытым долгам (только погашения уменьшают остаток) */

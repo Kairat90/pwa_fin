@@ -1,7 +1,7 @@
 import React from 'react'
 import { Edit2, Trash2, Star, User } from 'lucide-react'
 import { Contact, Debt } from '../../types'
-import { formatCurrency } from '../../utils/currency'
+import { formatCurrency, roundMoney } from '../../utils/currency'
 import { cn } from '../../utils/cn'
 import { EMOJI_BOX_16, ICON_16 } from '../../utils/iconSize'
 
@@ -14,7 +14,7 @@ interface ContactCardProps {
 }
 
 function debtRemaining(debt: Debt): number {
-  return debt.remainingAmount ?? Number(debt.amount)
+  return Math.max(0, roundMoney(debt.remainingAmount ?? Number(debt.amount)))
 }
 
 /** Компактная карточка контакта в общем списке */

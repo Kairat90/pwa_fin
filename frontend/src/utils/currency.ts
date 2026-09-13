@@ -41,3 +41,8 @@ export function parseAmount(value: string | number): number {
   if (typeof value === 'number') return value
   return parseFloat(value.replace(/\s/g, '').replace(',', '.')) || 0
 }
+
+/** Округление до копеек — убирает артефакты float (27016.519999999997 → 27016.52) */
+export function roundMoney(amount: number): number {
+  return Math.round(amount * 100) / 100
+}

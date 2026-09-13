@@ -20,6 +20,7 @@ import { addDays, endOfDay } from 'date-fns'
 import { toExclusiveEndDate } from '../utils/date'
 import { buildContactHistory, ContactHistoryData, ContactCurrencySummary, ContactPaymentEntry } from '../utils/contactHistory'
 import { computeDebtStats, type DebtStats } from '../utils/debtStats'
+import { roundMoney } from '../utils/currency'
 
 const AUTH_CODE_MESSAGES: Record<string, string> = {
   signup_disabled: 'Регистрация отключена. Включите Email sign ups в Supabase → Authentication → Providers',
@@ -227,14 +228,16 @@ export type ContactHistory = {
 async function enrichDebts(raw: Record<string, unknown>[]): Promise<Debt[]> {
   return raw.map((debt) => {
     const payments = (debt.payments as Array<{ amount: number; entryType?: string; entry_type?: string }>) ?? []
-    const paidAmount = payments
-      .filter((p) => (p.entryType ?? p.entry_type ?? 'repayment') === 'repayment')
-      .reduce((s, p) => s + Number(p.amount), 0)
-    const amount = Number(debt.amount)
+    const paidAmount = roundMoney(
+      payments
+        .filter((p) => (p.entryType ?? p.entry_type ?? 'repayment') === 'repayment')
+        .reduce((s, p) => s + Number(p.amount), 0)
+    )
+    const amount = roundMoney(Number(debt.amount))
     return {
       ...(debt as unknown as Debt),
       paidAmount,
-      remainingAmount: amount - paidAmount
+      remainingAmount: roundMoney(amount - paidAmount)
     }
   })
 }
