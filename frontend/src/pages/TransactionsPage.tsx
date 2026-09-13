@@ -178,8 +178,8 @@ const TransactionsPage: React.FC = () => {
           setRepeatSource(null)
         }}
         onSuccess={handleFormSuccess}
-        transaction={editingTransaction}
-        repeatSource={repeatSource}
+        transaction={editingTransaction ?? undefined}
+        repeatSource={repeatSource ?? undefined}
         type={formType}
         defaultAccountId={defaultAccount?.id}
       />
