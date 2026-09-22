@@ -12,7 +12,7 @@ const mainLinks = [
   { to: '/reports', icon: PieChart, label: 'Отчёты' }
 ]
 
-const morePaths = ['/accounts', '/categories', '/transfers', '/scheduled', '/contacts', '/settings']
+const morePaths = ['/accounts', '/categories', '/transfers', '/scheduled', '/contacts', '/settings', '/help']
 
 export function MobileBottomNav() {
   const [showMore, setShowMore] = useState(false)

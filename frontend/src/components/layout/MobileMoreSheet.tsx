@@ -6,7 +6,8 @@ import {
   Clock,
   Contact,
   X,
-  Settings
+  Settings,
+  CircleHelp
 } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import { ICON_16 } from '../../utils/iconSize'
@@ -22,7 +23,8 @@ const moreLinks = [
   { to: '/transfers', icon: Repeat, label: 'Переводы' },
   { to: '/scheduled', icon: Clock, label: 'Планировщик' },
   { to: '/contacts', icon: Contact, label: 'Контакты' },
-  { to: '/settings', icon: Settings, label: 'Настройки' }
+  { to: '/settings', icon: Settings, label: 'Настройки' },
+  { to: '/help', icon: CircleHelp, label: 'Справка' }
 ]
 
 export function MobileMoreSheet({ isOpen, onClose }: MobileMoreSheetProps) {

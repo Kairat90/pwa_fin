@@ -10,7 +10,8 @@ import {
   HandCoins,
   PieChart,
   LogOut,
-  Settings
+  Settings,
+  CircleHelp
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { cn } from '../../utils/cn'
@@ -29,7 +30,8 @@ export function Sidebar() {
     { to: '/contacts', icon: Contact, label: 'Контакты' },
     { to: '/debts', icon: HandCoins, label: 'Долги' },
     { to: '/reports', icon: PieChart, label: 'Отчеты' },
-    { to: '/settings', icon: Settings, label: 'Настройки' }
+    { to: '/settings', icon: Settings, label: 'Настройки' },
+    { to: '/help', icon: CircleHelp, label: 'Справка' }
   ]
 
   return (
