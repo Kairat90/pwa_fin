@@ -177,50 +177,58 @@ const Dashboard: React.FC = () => {
               {format(startDate, 'dd MMM yyyy', { locale: ru })} — {format(endDate, 'dd MMM yyyy', { locale: ru })}
             </p>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1 flex-wrap">
-              {PERIOD_BUTTONS.map(({ id, label }) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => handlePeriodChange(id)}
-                  className={cn(
-                    'px-3 py-1.5 text-sm rounded-lg transition-colors',
-                    period === id
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
+          <div className="flex flex-col items-stretch sm:items-end gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1 flex-wrap">
+                {PERIOD_BUTTONS.map(({ id, label }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => handlePeriodChange(id)}
+                    className={cn(
+                      'px-3 py-1.5 text-sm rounded-lg transition-colors',
+                      period === id
+                        ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                className="flex items-center gap-1"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Обновить
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefresh}
-              className="flex items-center gap-1"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Обновить
-            </Button>
+
+            {period === 'custom' && (
+              <div className="flex items-end gap-2">
+                <div className="w-[9.5rem]">
+                  <DateInput
+                    label="С"
+                    value={customStart}
+                    onChange={(e) => handleCustomStartChange(e.target.value)}
+                    className="!px-2 !py-1.5 !text-sm"
+                  />
+                </div>
+                <div className="w-[9.5rem]">
+                  <DateInput
+                    label="По"
+                    value={customEnd}
+                    onChange={(e) => handleCustomEndChange(e.target.value)}
+                    className="!px-2 !py-1.5 !text-sm"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
-
-        {period === 'custom' && (
-          <div className="flex flex-wrap items-end gap-3">
-            <DateInput
-              label="С"
-              value={customStart}
-              onChange={(e) => handleCustomStartChange(e.target.value)}
-            />
-            <DateInput
-              label="По"
-              value={customEnd}
-              onChange={(e) => handleCustomEndChange(e.target.value)}
-            />
-          </div>
-        )}
       </div>
 
       <div className="hidden md:block bg-gradient-to-r from-primary-600 to-primary-700 rounded-2xl p-6 text-white">
