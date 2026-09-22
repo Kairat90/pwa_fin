@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import { ICON_16 } from '../../utils/iconSize'
+import { useOverlayBackClose } from '../../hooks/useOverlayBackClose'
 
 interface MobileMoreSheetProps {
   isOpen: boolean
@@ -28,6 +29,8 @@ const moreLinks = [
 ]
 
 export function MobileMoreSheet({ isOpen, onClose }: MobileMoreSheetProps) {
+  useOverlayBackClose(isOpen, onClose)
+
   if (!isOpen) return null
 
   return (

@@ -32,6 +32,16 @@ if errorlevel 1 (
 )
 
 echo.
+echo === 0/2 npm install ===
+call npm install
+if errorlevel 1 (
+  echo.
+  echo FAILED: npm install
+  pause
+  exit /b 1
+)
+
+echo.
 echo === 1/2 Sync: build frontend + cap sync android ===
 call npm run android:sync
 if errorlevel 1 (

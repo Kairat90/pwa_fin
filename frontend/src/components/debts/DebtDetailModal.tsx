@@ -11,6 +11,7 @@ import {
   debtEntryTypeLabel,
   getDebtHistoryPayments
 } from '../../utils/debtHistory'
+import { useOverlayBackClose } from '../../hooks/useOverlayBackClose'
 import { Button } from '../ui/Button'
 import { EMOJI_BOX_16, ICON_16 } from '../../utils/iconSize'
 
@@ -34,6 +35,8 @@ export const DebtDetailModal: React.FC<DebtDetailModalProps> = ({
   onEditPayment,
   onDeletePayment
 }) => {
+  useOverlayBackClose(isOpen && Boolean(debt), onClose)
+
   if (!isOpen || !debt) return null
 
   const remainingAmount = roundMoney(debt.remainingAmount ?? Number(debt.amount))

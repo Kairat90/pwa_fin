@@ -2,6 +2,7 @@ import React, { useEffect } from 'react'
 import { X } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import { ICON_16 } from '../../utils/iconSize'
+import { useOverlayBackClose } from '../../hooks/useOverlayBackClose'
 
 interface ModalProps {
   isOpen: boolean
@@ -21,6 +22,8 @@ export const Modal: React.FC<ModalProps> = ({
   size = 'md',
   tallMobile = false
 }) => {
+  useOverlayBackClose(isOpen, onClose)
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'

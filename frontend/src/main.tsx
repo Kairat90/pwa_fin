@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
 import App from './App'
+import { initAndroidBackButton } from './lib/androidBackButton'
 
 declare global {
   interface Window {
@@ -34,6 +35,7 @@ function sanitizeCapacitorUserAgent() {
 }
 
 sanitizeCapacitorUserAgent()
+void initAndroidBackButton()
 
 /** Автообновление SW: при новой версии перезагружаем вкладку один раз */
 if (!window.Capacitor) {

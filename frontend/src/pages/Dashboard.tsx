@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { format, startOfMonth, endOfMonth, startOfDay, endOfDay, subDays } from 'date-fns'
+import { format, startOfMonth, endOfMonth, startOfDay, endOfDay, subDays, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import toast from 'react-hot-toast'
 import { RefreshCw } from 'lucide-react'
@@ -17,13 +17,27 @@ import { UpcomingScheduledBlock } from '../components/dashboard/UpcomingSchedule
 import { TransactionForm } from '../components/transactions/TransactionForm'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
+import { DateInput } from '../components/ui/DateInput'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { cn } from '../utils/cn'
 import { formatCurrency, normalizeCurrency } from '../utils/currency'
 import { resolveDefaultAccount } from '../utils/defaultAccount'
+import { toDateInputValue } from '../utils/dateInput'
 import { AccountIcon } from '../components/accounts/AccountIcon'
 
-type Period = 'month' | 'week' | 'today'
+type Period = 'today' | 'week' | 'month' | 'custom'
+
+const PERIOD_BUTTONS: { id: Period; label: string }[] = [
+  { id: 'today', label: 'Сегодня' },
+  { id: 'week', label: 'Неделя' },
+  { id: 'month', label: 'Месяц' },
+  { id: 'custom', label: 'Свой' }
+]
+
+function parseDay(value: string, end = false): Date {
+  const date = parseISO(value)
+  return end ? endOfDay(date) : startOfDay(date)
+}
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate()
@@ -32,6 +46,8 @@ const Dashboard: React.FC = () => {
   const [period, setPeriod] = useState<Period>('month')
   const [startDate, setStartDate] = useState(startOfMonth(new Date()))
   const [endDate, setEndDate] = useState(endOfMonth(new Date()))
+  const [customStart, setCustomStart] = useState(toDateInputValue(startOfMonth(new Date())))
+  const [customEnd, setCustomEnd] = useState(toDateInputValue(endOfMonth(new Date())))
   const [showForm, setShowForm] = useState(false)
   const [formType, setFormType] = useState<'income' | 'expense'>('expense')
 
@@ -71,6 +87,22 @@ const Dashboard: React.FC = () => {
     queryFn: () => supabaseApi.reports.getTopTransactions(startStr, endStr, 5)
   })
 
+  const applyCustomRange = (startValue: string, endValue: string) => {
+    let start = parseDay(startValue)
+    let end = parseDay(endValue, true)
+
+    if (start > end) {
+      const tmp = start
+      start = startOfDay(end)
+      end = endOfDay(tmp)
+      setCustomStart(toDateInputValue(start))
+      setCustomEnd(toDateInputValue(end))
+    }
+
+    setStartDate(start)
+    setEndDate(end)
+  }
+
   const handlePeriodChange = (newPeriod: Period) => {
     setPeriod(newPeriod)
     const now = new Date()
@@ -78,13 +110,32 @@ const Dashboard: React.FC = () => {
     if (newPeriod === 'today') {
       setStartDate(startOfDay(now))
       setEndDate(endOfDay(now))
-    } else if (newPeriod === 'week') {
+      return
+    }
+
+    if (newPeriod === 'week') {
       setStartDate(startOfDay(subDays(now, 7)))
       setEndDate(endOfDay(now))
-    } else {
+      return
+    }
+
+    if (newPeriod === 'month') {
       setStartDate(startOfMonth(now))
       setEndDate(endOfMonth(now))
+      return
     }
+
+    applyCustomRange(customStart, customEnd)
+  }
+
+  const handleCustomStartChange = (value: string) => {
+    setCustomStart(value)
+    applyCustomRange(value, customEnd)
+  }
+
+  const handleCustomEndChange = (value: string) => {
+    setCustomEnd(value)
+    applyCustomRange(customStart, value)
   }
 
   const handleRefresh = async () => {
@@ -102,7 +153,13 @@ const Dashboard: React.FC = () => {
   }
 
   const comparisonLabel =
-    period === 'month' ? 'к прошлому месяцу' : period === 'week' ? 'к прошлой неделе' : 'к вчера'
+    period === 'month'
+      ? 'к прошлому месяцу'
+      : period === 'week'
+        ? 'к прошлой неделе'
+        : period === 'today'
+          ? 'к вчера'
+          : 'к прошлому периоду'
 
   if (summaryLoading) {
     return <LoadingSpinner size="lg" />
@@ -110,41 +167,60 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Обзор</h1>
-          <p className="text-gray-500 text-sm">
-            {format(startDate, 'dd MMM yyyy', { locale: ru })} — {format(endDate, 'dd MMM yyyy', { locale: ru })}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-            {(['today', 'week', 'month'] as const).map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => handlePeriodChange(p)}
-                className={cn(
-                  'px-3 py-1.5 text-sm rounded-lg transition-colors',
-                  period === p
-                    ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-                )}
-              >
-                {p === 'today' ? 'Сегодня' : p === 'week' ? 'Неделя' : 'Месяц'}
-              </button>
-            ))}
+      <UpcomingScheduledBlock />
+
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Обзор</h1>
+            <p className="text-gray-500 text-sm">
+              {format(startDate, 'dd MMM yyyy', { locale: ru })} — {format(endDate, 'dd MMM yyyy', { locale: ru })}
+            </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            className="flex items-center gap-1"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Обновить
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1 flex-wrap">
+              {PERIOD_BUTTONS.map(({ id, label }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => handlePeriodChange(id)}
+                  className={cn(
+                    'px-3 py-1.5 text-sm rounded-lg transition-colors',
+                    period === id
+                      ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              className="flex items-center gap-1"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Обновить
+            </Button>
+          </div>
         </div>
+
+        {period === 'custom' && (
+          <div className="flex flex-wrap items-end gap-3">
+            <DateInput
+              label="С"
+              value={customStart}
+              onChange={(e) => handleCustomStartChange(e.target.value)}
+            />
+            <DateInput
+              label="По"
+              value={customEnd}
+              onChange={(e) => handleCustomEndChange(e.target.value)}
+            />
+          </div>
+        )}
       </div>
 
       <div className="hidden md:block bg-gradient-to-r from-primary-600 to-primary-700 rounded-2xl p-6 text-white">
@@ -206,8 +282,6 @@ const Dashboard: React.FC = () => {
           />
         </div>
       )}
-
-      <UpcomingScheduledBlock />
 
       <Card className="hidden md:block">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Сравнение с прошлым периодом</h3>
