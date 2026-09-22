@@ -27,11 +27,10 @@ import { AccountIcon } from '../components/accounts/AccountIcon'
 
 type Period = 'today' | 'week' | 'month' | 'custom'
 
-const PERIOD_BUTTONS: { id: Period; label: string }[] = [
+const PERIOD_BUTTONS: { id: Exclude<Period, 'custom'>; label: string }[] = [
   { id: 'today', label: 'Сегодня' },
   { id: 'week', label: 'Неделя' },
-  { id: 'month', label: 'Месяц' },
-  { id: 'custom', label: 'Свой' }
+  { id: 'month', label: 'Месяц' }
 ]
 
 function parseDay(value: string, end = false): Date {
@@ -99,43 +98,50 @@ const Dashboard: React.FC = () => {
       setCustomEnd(toDateInputValue(end))
     }
 
+    setPeriod('custom')
     setStartDate(start)
     setEndDate(end)
   }
 
-  const handlePeriodChange = (newPeriod: Period) => {
+  const handlePeriodChange = (newPeriod: Exclude<Period, 'custom'>) => {
     setPeriod(newPeriod)
     const now = new Date()
 
     if (newPeriod === 'today') {
-      setStartDate(startOfDay(now))
-      setEndDate(endOfDay(now))
+      const start = startOfDay(now)
+      const end = endOfDay(now)
+      setStartDate(start)
+      setEndDate(end)
+      setCustomStart(toDateInputValue(start))
+      setCustomEnd(toDateInputValue(end))
       return
     }
 
     if (newPeriod === 'week') {
-      setStartDate(startOfDay(subDays(now, 7)))
-      setEndDate(endOfDay(now))
+      const start = startOfDay(subDays(now, 7))
+      const end = endOfDay(now)
+      setStartDate(start)
+      setEndDate(end)
+      setCustomStart(toDateInputValue(start))
+      setCustomEnd(toDateInputValue(end))
       return
     }
 
-    if (newPeriod === 'month') {
-      setStartDate(startOfMonth(now))
-      setEndDate(endOfMonth(now))
+    const start = startOfMonth(now)
+    const end = endOfMonth(now)
+    setStartDate(start)
+    setEndDate(end)
+    setCustomStart(toDateInputValue(start))
+    setCustomEnd(toDateInputValue(end))
+  }
+
+  const handleApplyCustom = () => {
+    if (!customStart || !customEnd) {
+      toast.error('Укажите обе даты')
       return
     }
 
     applyCustomRange(customStart, customEnd)
-  }
-
-  const handleCustomStartChange = (value: string) => {
-    setCustomStart(value)
-    applyCustomRange(value, customEnd)
-  }
-
-  const handleCustomEndChange = (value: string) => {
-    setCustomEnd(value)
-    applyCustomRange(customStart, value)
   }
 
   const handleRefresh = async () => {
@@ -177,56 +183,52 @@ const Dashboard: React.FC = () => {
               {format(startDate, 'dd MMM yyyy', { locale: ru })} — {format(endDate, 'dd MMM yyyy', { locale: ru })}
             </p>
           </div>
-          <div className="flex flex-col items-stretch sm:items-end gap-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1 flex-wrap">
-                {PERIOD_BUTTONS.map(({ id, label }) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => handlePeriodChange(id)}
-                    className={cn(
-                      'px-3 py-1.5 text-sm rounded-lg transition-colors',
-                      period === id
-                        ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-                    )}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefresh}
-                className="flex items-center gap-1"
-              >
-                <RefreshCw className="w-4 h-4" />
-                Обновить
-              </Button>
+          <div className="flex items-center gap-2 flex-wrap sm:justify-end">
+            <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1 flex-wrap">
+              {PERIOD_BUTTONS.map(({ id, label }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => handlePeriodChange(id)}
+                  className={cn(
+                    'px-3 py-1.5 text-sm rounded-lg transition-colors',
+                    period === id
+                      ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
-
-            {period === 'custom' && (
-              <div className="flex items-end gap-2">
-                <div className="w-[9.5rem]">
-                  <DateInput
-                    label="С"
-                    value={customStart}
-                    onChange={(e) => handleCustomStartChange(e.target.value)}
-                    className="!px-2 !py-1.5 !text-sm"
-                  />
-                </div>
-                <div className="w-[9.5rem]">
-                  <DateInput
-                    label="По"
-                    value={customEnd}
-                    onChange={(e) => handleCustomEndChange(e.target.value)}
-                    className="!px-2 !py-1.5 !text-sm"
-                  />
-                </div>
-              </div>
-            )}
+            <div className="w-[9.5rem]">
+              <DateInput
+                value={customStart}
+                onChange={(e) => setCustomStart(e.target.value)}
+                className="!px-2 !py-1.5 !text-sm"
+                aria-label="Дата с"
+              />
+            </div>
+            <div className="w-[9.5rem]">
+              <DateInput
+                value={customEnd}
+                onChange={(e) => setCustomEnd(e.target.value)}
+                className="!px-2 !py-1.5 !text-sm"
+                aria-label="Дата по"
+              />
+            </div>
+            <Button variant="outline" size="sm" onClick={handleApplyCustom}>
+              Задать
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              className="flex items-center gap-1"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Обновить
+            </Button>
           </div>
         </div>
       </div>
