@@ -207,7 +207,7 @@ const SettingsPage: React.FC = () => {
               ))}
             </select>
             <p className="text-xs text-gray-500 mt-1">
-              Используется на дашборде и в отчётах, если у счёта не указана своя валюта
+              Используется на главной и в отчётах, если у счёта не указана своя валюта
             </p>
           </div>
           <Button type="submit" loading={profileLoading}>Сохранить</Button>

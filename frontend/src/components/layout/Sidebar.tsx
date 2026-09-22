@@ -20,7 +20,7 @@ export function Sidebar() {
   const { logout } = useAuth()
 
   const links = [
-    { to: '/dashboard', icon: LayoutDashboard, label: 'Дашборд' },
+    { to: '/dashboard', icon: LayoutDashboard, label: 'Главная' },
     { to: '/accounts', icon: Wallet, label: 'Счета' },
     { to: '/categories', icon: FolderOpen, label: 'Категории' },
     { to: '/transactions', icon: Receipt, label: 'Транзакции' },
