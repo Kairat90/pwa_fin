@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import {
   Wallet,
   FolderOpen,
@@ -29,9 +29,15 @@ const moreLinks = [
 ]
 
 export function MobileMoreSheet({ isOpen, onClose }: MobileMoreSheetProps) {
+  const navigate = useNavigate()
   useOverlayBackClose(isOpen, onClose)
 
   if (!isOpen) return null
+
+  const handleNavigate = (to: string) => {
+    onClose()
+    navigate(to)
+  }
 
   return (
     <div className="fixed inset-0 z-[70] md:hidden">
@@ -41,7 +47,12 @@ export function MobileMoreSheet({ isOpen, onClose }: MobileMoreSheetProps) {
         aria-label="Закрыть меню"
         onClick={onClose}
       />
-      <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-900 rounded-t-2xl shadow-xl pb-safe">
+      <div
+        className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-900 rounded-t-2xl shadow-xl pb-safe z-[1]"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Ещё"
+      >
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Ещё</h2>
           <button
@@ -57,7 +68,10 @@ export function MobileMoreSheet({ isOpen, onClose }: MobileMoreSheetProps) {
             <NavLink
               key={to}
               to={to}
-              onClick={onClose}
+              onClick={(event) => {
+                event.preventDefault()
+                handleNavigate(to)
+              }}
               className={({ isActive }) =>
                 cn(
                   'flex items-center gap-3 px-4 py-3 rounded-xl text-base transition-colors',
