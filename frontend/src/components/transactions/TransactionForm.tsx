@@ -10,6 +10,7 @@ import { cn } from '../../utils/cn'
 import { getAccountOptionLabel } from '../../utils/accountIcons'
 import { buildCategoryTree, flattenCategoryTree, formatCategoryOptionLabel } from '../../utils/categoryTree'
 import { dateInputToIso, toDateInputValue } from '../../utils/dateInput'
+import { getVisibleTags } from '../../utils/tags'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { DateInput } from '../ui/DateInput'
@@ -86,7 +87,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         amount: Math.abs(Number(repeatSource.amount)),
         date: toDateInputValue(),
         note: repeatSource.note || '',
-        tags: repeatSource.tags.filter((t) => t !== 'transfer').join(', '),
+        tags: getVisibleTags(repeatSource.tags).join(', '),
         isExcludedFromBudget: repeatSource.isExcludedFromBudget || false
       })
     } else {

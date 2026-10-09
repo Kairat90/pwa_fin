@@ -7,6 +7,7 @@ import { Transaction } from '../../types'
 import { formatCurrency } from '../../utils/currency'
 import { cn } from '../../utils/cn'
 import { ICON_16 } from '../../utils/iconSize'
+import { getVisibleTags } from '../../utils/tags'
 import { Button } from '../ui/Button'
 import { Modal } from '../ui/Modal'
 
@@ -45,7 +46,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
   const amount = Number(transaction.amount)
   const isIncome = amount > 0
   const isTransfer = transaction.tags.includes('transfer')
-  const visibleTags = transaction.tags.filter((tag) => tag !== 'transfer' && !tag.startsWith('tid:'))
+  const visibleTags = getVisibleTags(transaction.tags)
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={isTransfer ? 'Перевод' : isIncome ? 'Доход' : 'Расход'} size="md">

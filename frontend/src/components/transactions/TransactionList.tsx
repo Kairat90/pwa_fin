@@ -6,6 +6,7 @@ import { Transaction } from '../../types'
 import { formatCurrency } from '../../utils/currency'
 import { cn } from '../../utils/cn'
 import { ICON_16 } from '../../utils/iconSize'
+import { getVisibleTags } from '../../utils/tags'
 
 interface TransactionListProps {
   transactions: Transaction[]
@@ -48,6 +49,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         const amount = Number(transaction.amount)
         const currency = transaction.account?.currency
         const isTransfer = transaction.tags.includes('transfer')
+        const visibleTags = getVisibleTags(transaction.tags)
 
         return (
           <div
@@ -112,9 +114,9 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                   {transaction.account?.name || 'Счет удален'}
                   {transaction.note && ` • ${transaction.note}`}
                 </p>
-                {transaction.tags.length > 0 && (
+                {visibleTags.length > 0 && (
                   <div className="flex gap-1 mt-1 flex-wrap">
-                    {transaction.tags.map((tag, i) => (
+                    {visibleTags.map((tag, i) => (
                       <span key={i} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
                         #{tag}
                       </span>
