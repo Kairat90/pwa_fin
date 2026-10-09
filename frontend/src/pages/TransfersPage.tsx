@@ -146,7 +146,7 @@ const TransfersPage: React.FC = () => {
                       </p>
                     )}
                     <p className="text-xs text-gray-400">
-                      {format(new Date(transfer.date), 'dd MMM yyyy, HH:mm', { locale: ru })}
+                      {format(new Date(transfer.date), 'dd MMM yyyy', { locale: ru })}
                     </p>
                   </div>
                   <div className="flex items-center gap-1" onKeyDown={(e) => e.stopPropagation()}>

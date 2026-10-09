@@ -1,4 +1,5 @@
 import { Debt, DebtPayment } from '../types'
+import { sortMovements } from './movementOrder'
 
 /** Подпись типа операции в истории долга */
 export function debtEntryTypeLabel(entryType?: DebtPayment['entryType']): string {
@@ -35,7 +36,7 @@ export function getDebtHistoryPayments(debt: Debt): DebtPayment[] {
     })
   }
 
-  return payments.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  return sortMovements(payments)
 }
 
 /** Можно ли удалить операцию из истории */

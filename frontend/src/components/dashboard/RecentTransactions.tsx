@@ -79,7 +79,7 @@ export const RecentTransactions: React.FC<RecentTransactionsProps> = ({
                   </p>
                   <p className="text-sm text-gray-500">
                     {transaction.note || 'Без описания'} •{' '}
-                    {format(new Date(transaction.date), 'dd MMM, HH:mm', { locale: ru })}
+                    {format(new Date(transaction.date), 'dd MMM yyyy', { locale: ru })}
                   </p>
                 </div>
               </div>

@@ -22,12 +22,18 @@ AS $$
 DECLARE
     uid UUID := auth.uid();
     result JSONB;
+    original_created_at TIMESTAMPTZ;
+    new_transfer_id UUID;
 BEGIN
     IF uid IS NULL THEN
         RAISE EXCEPTION 'Пользователь не авторизован';
     END IF;
 
-    IF NOT EXISTS (SELECT 1 FROM transfers WHERE id = p_transfer_id AND user_id = uid) THEN
+    SELECT created_at INTO original_created_at
+    FROM transfers
+    WHERE id = p_transfer_id AND user_id = uid;
+
+    IF NOT FOUND THEN
         RAISE EXCEPTION 'Перевод не найден';
     END IF;
 
@@ -41,6 +47,20 @@ BEGIN
         date => p_date,
         note => p_note
     );
+
+    -- Порядок внутри дня идёт по created_at: отредактированный перевод остаётся на своём месте
+    new_transfer_id := (result->>'id')::UUID;
+
+    UPDATE transfers
+    SET created_at = original_created_at
+    WHERE id = new_transfer_id AND user_id = uid;
+
+    UPDATE transactions
+    SET created_at = original_created_at
+    WHERE user_id = uid
+      AND ('tid:' || new_transfer_id::TEXT) = ANY (tags);
+
+    result := jsonb_set(result, '{created_at}', to_jsonb(original_created_at));
 
     RETURN result;
 END;

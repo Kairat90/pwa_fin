@@ -1,5 +1,6 @@
 import { Debt, DebtPayment } from '../types'
 import { normalizeCurrency, roundMoney } from './currency'
+import { compareMovements } from './movementOrder'
 
 /** Сводка по валютам для контакта */
 export type ContactCurrencySummary = {
@@ -80,7 +81,7 @@ export function buildContactHistory(debts: Debt[]): ContactHistoryData {
     }
   }
 
-  payments.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  payments.sort(compareMovements)
 
   return {
     debts: sortedDebts,

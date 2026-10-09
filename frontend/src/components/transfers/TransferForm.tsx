@@ -3,11 +3,11 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
-import { format } from 'date-fns'
 import { Account, Transfer } from '../../types'
 import { supabaseApi, getErrorMessage } from '../../api/supabase'
 import { getAccountOptionLabel } from '../../utils/accountIcons'
 import { formatCurrency } from '../../utils/currency'
+import { dateInputToIso, toDateInputValue } from '../../utils/dateInput'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { DateInput } from '../ui/DateInput'
@@ -58,7 +58,7 @@ export const TransferForm: React.FC<TransferFormProps> = ({
     resolver: zodResolver(transferSchema),
     defaultValues: {
       fromAccountId: defaultFromAccountId || '',
-      date: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+      date: toDateInputValue(),
       fee: 0
     }
   })
@@ -84,7 +84,7 @@ export const TransferForm: React.FC<TransferFormProps> = ({
         toAccountId: transfer.toAccountId,
         amount: Number(transfer.amount),
         fee: Number(transfer.fee) || 0,
-        date: format(new Date(transfer.date), "yyyy-MM-dd'T'HH:mm"),
+        date: toDateInputValue(transfer.date),
         note: transfer.note || ''
       })
       return
@@ -95,7 +95,7 @@ export const TransferForm: React.FC<TransferFormProps> = ({
       toAccountId: '',
       amount: undefined,
       fee: 0,
-      date: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+      date: toDateInputValue(),
       note: ''
     })
   }, [isOpen, defaultFromAccountId, transfer, reset])
@@ -126,7 +126,7 @@ export const TransferForm: React.FC<TransferFormProps> = ({
         toAccountId: data.toAccountId,
         amount: data.amount,
         fee: data.fee || 0,
-        date: new Date(data.date).toISOString(),
+        date: dateInputToIso(data.date),
         note: data.note
       }
 
@@ -237,7 +237,6 @@ export const TransferForm: React.FC<TransferFormProps> = ({
 
           <DateInput
             label="Дата"
-            type="datetime-local"
             error={errors.date?.message}
             {...register('date')}
           />

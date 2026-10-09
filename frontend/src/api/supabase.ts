@@ -21,6 +21,7 @@ import { toExclusiveEndDate } from '../utils/date'
 import { buildContactHistory, ContactHistoryData, ContactCurrencySummary, ContactPaymentEntry } from '../utils/contactHistory'
 import { computeDebtStats, type DebtStats } from '../utils/debtStats'
 import { roundMoney } from '../utils/currency'
+import { sortMovements } from '../utils/movementOrder'
 
 const AUTH_CODE_MESSAGES: Record<string, string> = {
   signup_disabled: 'Регистрация отключена. Включите Email sign ups в Supabase → Authentication → Providers',
@@ -625,6 +626,7 @@ export const supabaseApi = {
         .from('transactions')
         .select('*, account:accounts(*), category:categories(*)', { count: 'exact' })
         .order('date', { ascending: false })
+        .order('created_at', { ascending: true })
 
       if (filters?.startDate) query = query.gte('date', filters.startDate)
       if (filters?.endDate) query = query.lt('date', toExclusiveEndDate(filters.endDate))
@@ -654,7 +656,7 @@ export const supabaseApi = {
         const from = (page - 1) * limit
 
         return {
-          data: matched.slice(from, from + limit),
+          data: sortMovements(matched).slice(from, from + limit),
           total,
           page,
           limit,
@@ -670,7 +672,7 @@ export const supabaseApi = {
 
       const total = count ?? data?.length ?? 0
       return {
-        data: mapKeys<Transaction[]>(data ?? []),
+        data: sortMovements(mapKeys<Transaction[]>(data ?? [])),
         total,
         page,
         limit,
@@ -686,6 +688,7 @@ export const supabaseApi = {
         .gte('date', startDate)
         .lt('date', toExclusiveEndDate(endDate))
         .order('date', { ascending: false })
+        .order('created_at', { ascending: true })
         .limit(5000)
 
       if (accountIds && accountIds.length > 0) {
@@ -695,7 +698,7 @@ export const supabaseApi = {
       const { data, error } = await query
       if (error) throw new Error(error.message)
 
-      return mapKeys<Transaction[]>(data ?? [])
+      return sortMovements(mapKeys<Transaction[]>(data ?? []))
     },
 
     getOne: async (id: string): Promise<Transaction> => {
@@ -779,7 +782,7 @@ export const supabaseApi = {
 
       const page = filters?.page ?? 1
       const limit = filters?.limit ?? 20
-      const all = mapKeys<Transfer[]>(data ?? [])
+      const all = sortMovements(mapKeys<Transfer[]>(data ?? []))
       const start = (page - 1) * limit
 
       return {

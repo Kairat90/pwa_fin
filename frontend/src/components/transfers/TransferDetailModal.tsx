@@ -46,7 +46,7 @@ export const TransferDetailModal: React.FC<TransferDetailModalProps> = ({
             </p>
           )}
           <p className="text-sm text-gray-500 mt-1">
-            {format(new Date(transfer.date), 'dd MMMM yyyy, HH:mm', { locale: ru })}
+            {format(new Date(transfer.date), 'dd MMMM yyyy', { locale: ru })}
           </p>
         </div>
 

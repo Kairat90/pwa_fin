@@ -56,7 +56,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
             {formatCurrency(amount, transaction.account?.currency)}
           </p>
           <p className="text-sm text-gray-500 mt-1">
-            {format(new Date(transaction.date), 'dd MMMM yyyy, HH:mm', { locale: ru })}
+            {format(new Date(transaction.date), 'dd MMMM yyyy', { locale: ru })}
           </p>
         </div>
 

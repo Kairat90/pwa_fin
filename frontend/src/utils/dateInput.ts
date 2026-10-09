@@ -1,6 +1,7 @@
 /**
  * Поля ввода только даты (без времени).
- * При сохранении к выбранной дате подставляется текущее время.
+ * Операции привязаны к календарному дню; время в базе — полдень этого дня,
+ * чтобы день не «уезжал» при переводе в UTC.
  */
 
 /** Значение для input type="date" (yyyy-MM-dd) */
@@ -12,20 +13,11 @@ export function toDateInputValue(date: Date | string = new Date()): string {
   return `${y}-${m}-${day}`
 }
 
-/** Выбранная дата + текущее локальное время → ISO для API */
+/** Выбранная дата → ISO для API (полдень локального дня) */
 export function dateInputToIso(dateOnly: string): string {
   const [year, month, day] = dateOnly.split('-').map(Number)
-  const now = new Date()
 
-  return new Date(
-    year,
-    month - 1,
-    day,
-    now.getHours(),
-    now.getMinutes(),
-    now.getSeconds(),
-    now.getMilliseconds()
-  ).toISOString()
+  return new Date(year, month - 1, day, 12, 0, 0, 0).toISOString()
 }
 
 /** Опциональная дата из input type="date" */

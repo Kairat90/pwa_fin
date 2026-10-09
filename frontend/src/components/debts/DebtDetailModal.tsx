@@ -206,7 +206,7 @@ export const DebtDetailModal: React.FC<DebtDetailModalProps> = ({
                           <p className="text-sm text-gray-500 mt-0.5">{payment.note}</p>
                         )}
                         <p className="text-xs text-gray-400 mt-1">
-                          {format(new Date(payment.date), 'dd MMM yyyy, HH:mm', { locale: ru })}
+                          {format(new Date(payment.date), 'dd MMM yyyy', { locale: ru })}
                         </p>
                       </div>
 

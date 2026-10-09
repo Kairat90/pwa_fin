@@ -62,6 +62,7 @@ export interface Transfer {
   status: string
   fromAccount?: Account
   toAccount?: Account
+  createdAt?: string
 }
 
 export interface ScheduledTransaction {
@@ -124,6 +125,7 @@ export interface DebtPayment {
   note?: string
   transactionId?: string
   entryType?: 'repayment' | 'increase' | 'initial'
+  createdAt?: string
 }
 
 export type DebtEntryMode = 'repayment' | 'increase' | 'initial'

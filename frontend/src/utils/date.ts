@@ -6,10 +6,6 @@ export function formatDate(date: string | Date, pattern = 'dd.MM.yyyy'): string 
   return format(d, pattern, { locale: ru })
 }
 
-export function formatDateTime(date: string | Date): string {
-  return formatDate(date, 'dd.MM.yyyy HH:mm')
-}
-
 /**
  * Верхняя граница периода для TIMESTAMPTZ: день endDate (yyyy-MM-dd) включительно.
  * Использовать с `.lt('date', …)` — иначе `lte` с датой без времени отсекает весь день окончания.

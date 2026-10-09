@@ -134,7 +134,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                   {formatCurrency(amount, currency)}
                 </p>
                 <p className="text-xs text-gray-400">
-                  {format(new Date(transaction.date), 'dd MMM, HH:mm', { locale: ru })}
+                  {format(new Date(transaction.date), 'dd MMM yyyy', { locale: ru })}
                 </p>
               </div>
               {!isTransfer && (
