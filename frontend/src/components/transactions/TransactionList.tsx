@@ -12,6 +12,8 @@ interface TransactionListProps {
   onEdit: (transaction: Transaction) => void
   onDelete: (id: string) => void
   onRepeat?: (transaction: Transaction) => void
+  /** Клик по строке — открыть просмотр */
+  onView?: (transaction: Transaction) => void
   loading?: boolean
 }
 
@@ -20,6 +22,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   onEdit,
   onDelete,
   onRepeat,
+  onView,
   loading
 }) => {
   if (loading) {
@@ -49,7 +52,23 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         return (
           <div
             key={transaction.id}
-            className="flex items-center justify-between p-4 bg-white rounded-xl border hover:shadow-md transition-shadow"
+            role={onView ? 'button' : undefined}
+            tabIndex={onView ? 0 : undefined}
+            onClick={onView ? () => onView(transaction) : undefined}
+            onKeyDown={
+              onView
+                ? (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      onView(transaction)
+                    }
+                  }
+                : undefined
+            }
+            className={cn(
+              'flex items-center justify-between p-4 bg-white rounded-xl border hover:shadow-md transition-shadow',
+              onView && 'cursor-pointer'
+            )}
           >
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <div className={cn(
@@ -119,7 +138,11 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                 </p>
               </div>
               {!isTransfer && (
-                <div className="flex items-center gap-1">
+                <div
+                  className="flex items-center gap-1"
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                >
                   {onRepeat && (
                     <button
                       type="button"

@@ -9,6 +9,7 @@ import { Transaction } from '../types'
 import { resolveDefaultAccount } from '../utils/defaultAccount'
 import { TransactionList } from '../components/transactions/TransactionList'
 import { TransactionForm } from '../components/transactions/TransactionForm'
+import { TransactionDetailModal } from '../components/transactions/TransactionDetailModal'
 import { TransactionFilters, TransactionFilterValues } from '../components/transactions/TransactionFilters'
 import { Button } from '../components/ui/Button'
 
@@ -17,6 +18,7 @@ const TransactionsPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
   const [repeatSource, setRepeatSource] = useState<Transaction | null>(null)
+  const [viewingTransaction, setViewingTransaction] = useState<Transaction | null>(null)
   const [formType, setFormType] = useState<'income' | 'expense'>('expense')
 
   const queryClient = useQueryClient()
@@ -63,6 +65,7 @@ const TransactionsPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      setViewingTransaction(null)
       toast.success('Транзакция удалена')
     },
     onError: (error: unknown) => {
@@ -70,7 +73,14 @@ const TransactionsPage: React.FC = () => {
     }
   })
 
+  const handleDelete = (id: string) => {
+    if (window.confirm('Удалить транзакцию?')) {
+      deleteMutation.mutate(id)
+    }
+  }
+
   const handleEdit = (transaction: Transaction) => {
+    setViewingTransaction(null)
     setRepeatSource(null)
     setEditingTransaction(transaction)
     setFormType(Number(transaction.amount) > 0 ? 'income' : 'expense')
@@ -78,6 +88,7 @@ const TransactionsPage: React.FC = () => {
   }
 
   const handleRepeat = (transaction: Transaction) => {
+    setViewingTransaction(null)
     setEditingTransaction(null)
     setRepeatSource(transaction)
     setFormType(Number(transaction.amount) > 0 ? 'income' : 'expense')
@@ -162,13 +173,19 @@ const TransactionsPage: React.FC = () => {
           transactions={transactionsData?.data || []}
           onEdit={handleEdit}
           onRepeat={handleRepeat}
-          onDelete={(id) => {
-            if (window.confirm('Удалить транзакцию?')) {
-              deleteMutation.mutate(id)
-            }
-          }}
+          onView={setViewingTransaction}
+          onDelete={handleDelete}
         />
       )}
+
+      <TransactionDetailModal
+        isOpen={Boolean(viewingTransaction)}
+        onClose={() => setViewingTransaction(null)}
+        transaction={viewingTransaction}
+        onEdit={handleEdit}
+        onRepeat={handleRepeat}
+        onDelete={(transaction) => handleDelete(transaction.id)}
+      />
 
       <TransactionForm
         isOpen={showForm}

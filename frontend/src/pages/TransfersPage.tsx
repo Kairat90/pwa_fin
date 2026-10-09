@@ -3,9 +3,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import { Plus, ArrowRight, Trash2 } from 'lucide-react'
+import { Plus, ArrowRight, Pencil, Trash2 } from 'lucide-react'
 import { supabaseApi, getErrorMessage } from '../api/supabase'
+import { Transfer } from '../types'
 import { TransferForm } from '../components/transfers/TransferForm'
+import { TransferDetailModal } from '../components/transfers/TransferDetailModal'
 import { Button } from '../components/ui/Button'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { formatCurrency } from '../utils/currency'
@@ -15,6 +17,8 @@ import { ICON_16 } from '../utils/iconSize'
 
 const TransfersPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false)
+  const [editingTransfer, setEditingTransfer] = useState<Transfer | null>(null)
+  const [viewingTransfer, setViewingTransfer] = useState<Transfer | null>(null)
   const queryClient = useQueryClient()
 
   const { data: transfersData, isLoading } = useQuery({
@@ -22,12 +26,17 @@ const TransfersPage: React.FC = () => {
     queryFn: () => supabaseApi.transfers.getAll()
   })
 
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ['transfers'] })
+    queryClient.invalidateQueries({ queryKey: ['accounts'] })
+    queryClient.invalidateQueries({ queryKey: ['transactions'] })
+  }
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => supabaseApi.transfers.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transfers'] })
-      queryClient.invalidateQueries({ queryKey: ['accounts'] })
-      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      invalidateAll()
+      setViewingTransfer(null)
       toast.success('Перевод отменен')
     },
     onError: (error: unknown) => {
@@ -36,6 +45,28 @@ const TransfersPage: React.FC = () => {
   })
 
   const transfers = transfersData?.data || []
+
+  const openCreate = () => {
+    setEditingTransfer(null)
+    setShowForm(true)
+  }
+
+  const openEdit = (transfer: Transfer) => {
+    setViewingTransfer(null)
+    setEditingTransfer(transfer)
+    setShowForm(true)
+  }
+
+  const confirmDelete = (transfer: Transfer) => {
+    if (window.confirm('Отменить перевод? Балансы счетов будут восстановлены.')) {
+      deleteMutation.mutate(transfer.id)
+    }
+  }
+
+  const closeForm = () => {
+    setShowForm(false)
+    setEditingTransfer(null)
+  }
 
   return (
     <div className="space-y-6">
@@ -47,7 +78,7 @@ const TransfersPage: React.FC = () => {
           </p>
         </div>
         <Button
-          onClick={() => setShowForm(true)}
+          onClick={openCreate}
           size="sm"
           className="bg-blue-600 hover:bg-blue-700 inline-flex items-center gap-1 whitespace-nowrap shrink-0 self-start sm:self-auto"
         >
@@ -71,7 +102,16 @@ const TransfersPage: React.FC = () => {
           {transfers.map((transfer) => (
             <div
               key={transfer.id}
-              className="bg-white rounded-xl border p-4 shadow-sm hover:shadow-md transition-shadow"
+              role="button"
+              tabIndex={0}
+              onClick={() => setViewingTransfer(transfer)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setViewingTransfer(transfer)
+                }
+              }}
+              className="bg-white rounded-xl border p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
             >
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -109,14 +149,30 @@ const TransfersPage: React.FC = () => {
                       {format(new Date(transfer.date), 'dd MMM yyyy, HH:mm', { locale: ru })}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => deleteMutation.mutate(transfer.id)}
-                    className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                    title="Отменить перевод"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-1" onKeyDown={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openEdit(transfer)
+                      }}
+                      className="p-1.5 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-primary-50 transition-colors"
+                      title="Редактировать перевод"
+                    >
+                      <Pencil className={ICON_16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        confirmDelete(transfer)
+                      }}
+                      className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                      title="Отменить перевод"
+                    >
+                      <Trash2 className={ICON_16} />
+                    </button>
+                  </div>
                 </div>
               </div>
               {transfer.note && (
@@ -127,13 +183,22 @@ const TransfersPage: React.FC = () => {
         </div>
       )}
 
+      <TransferDetailModal
+        isOpen={Boolean(viewingTransfer)}
+        onClose={() => setViewingTransfer(null)}
+        transfer={viewingTransfer}
+        onEdit={openEdit}
+        onDelete={confirmDelete}
+        deleting={deleteMutation.isPending}
+      />
+
       <TransferForm
         isOpen={showForm}
-        onClose={() => setShowForm(false)}
+        onClose={closeForm}
+        transfer={editingTransfer}
         onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['transfers'] })
-          queryClient.invalidateQueries({ queryKey: ['accounts'] })
-          setShowForm(false)
+          invalidateAll()
+          closeForm()
         }}
       />
     </div>

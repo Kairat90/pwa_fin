@@ -797,6 +797,20 @@ export const supabaseApi = {
       return mapKeys<Transfer>(data)
     },
 
+    update: async (id: string, payload: TransferCreateData): Promise<Transfer> => {
+      const { data, error } = await supabase.rpc('update_transfer', {
+        p_transfer_id: id,
+        p_from_account_id: payload.fromAccountId,
+        p_to_account_id: payload.toAccountId,
+        p_amount: payload.amount,
+        p_fee: payload.fee ?? 0,
+        p_date: payload.date,
+        p_note: payload.note ?? null
+      })
+      if (error) throw new Error(error.message)
+      return mapKeys<Transfer>(data)
+    },
+
     delete: async (id: string): Promise<void> => {
       const { error } = await supabase.rpc('cancel_transfer', { p_transfer_id: id })
       if (error) throw new Error(error.message)

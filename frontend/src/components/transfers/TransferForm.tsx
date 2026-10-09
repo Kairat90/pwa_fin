@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
-import { Account } from '../../types'
+import { Account, Transfer } from '../../types'
 import { supabaseApi, getErrorMessage } from '../../api/supabase'
 import { getAccountOptionLabel } from '../../utils/accountIcons'
 import { formatCurrency } from '../../utils/currency'
@@ -32,14 +32,18 @@ interface TransferFormProps {
   onClose: () => void
   onSuccess: () => void
   defaultFromAccountId?: string
+  /** Перевод для редактирования; без него — создание нового */
+  transfer?: Transfer | null
 }
 
 export const TransferForm: React.FC<TransferFormProps> = ({
   isOpen,
   onClose,
   onSuccess,
-  defaultFromAccountId
+  defaultFromAccountId,
+  transfer
 }) => {
+  const isEdit = Boolean(transfer)
   const [loading, setLoading] = useState(false)
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loadingData, setLoadingData] = useState(true)
@@ -68,8 +72,23 @@ export const TransferForm: React.FC<TransferFormProps> = ({
   const toAccount = accounts.find((a) => a.id === toAccountId)
   const totalWithFee = Number(amount) + Number(fee)
 
+  const isSelectableAccount = (account: Account) =>
+    !account.isArchived || account.id === transfer?.fromAccountId || account.id === transfer?.toAccountId
+
   useEffect(() => {
     if (!isOpen) return
+
+    if (transfer) {
+      reset({
+        fromAccountId: transfer.fromAccountId,
+        toAccountId: transfer.toAccountId,
+        amount: Number(transfer.amount),
+        fee: Number(transfer.fee) || 0,
+        date: format(new Date(transfer.date), "yyyy-MM-dd'T'HH:mm"),
+        note: transfer.note || ''
+      })
+      return
+    }
 
     reset({
       fromAccountId: defaultFromAccountId || '',
@@ -79,7 +98,7 @@ export const TransferForm: React.FC<TransferFormProps> = ({
       date: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
       note: ''
     })
-  }, [isOpen, defaultFromAccountId, reset])
+  }, [isOpen, defaultFromAccountId, transfer, reset])
 
   useEffect(() => {
     const loadData = async () => {
@@ -102,15 +121,23 @@ export const TransferForm: React.FC<TransferFormProps> = ({
   const onSubmit = async (data: TransferFormData) => {
     try {
       setLoading(true)
-      await supabaseApi.transfers.create({
+      const payload = {
         fromAccountId: data.fromAccountId,
         toAccountId: data.toAccountId,
         amount: data.amount,
         fee: data.fee || 0,
         date: new Date(data.date).toISOString(),
         note: data.note
-      })
-      toast.success('Перевод выполнен')
+      }
+
+      if (transfer) {
+        await supabaseApi.transfers.update(transfer.id, payload)
+        toast.success('Перевод изменён')
+      } else {
+        await supabaseApi.transfers.create(payload)
+        toast.success('Перевод выполнен')
+      }
+
       onSuccess()
       onClose()
     } catch (error: unknown) {
@@ -121,7 +148,12 @@ export const TransferForm: React.FC<TransferFormProps> = ({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Перевод между счетами" size="lg">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={isEdit ? 'Редактирование перевода' : 'Перевод между счетами'}
+      size="lg"
+    >
       {loadingData ? (
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-4 border-primary-200 border-t-primary-600" />
@@ -136,7 +168,7 @@ export const TransferForm: React.FC<TransferFormProps> = ({
                 {...register('fromAccountId')}
               >
                 <option value="">Выберите счет</option>
-                {accounts.filter((a) => !a.isArchived).map((account) => (
+                {accounts.filter((a) => isSelectableAccount(a)).map((account) => (
                   <option key={account.id} value={account.id}>
                     {getAccountOptionLabel(account)} ({formatCurrency(Number(account.balance ?? account.initialBalance), account.currency)})
                   </option>
@@ -155,7 +187,7 @@ export const TransferForm: React.FC<TransferFormProps> = ({
               >
                 <option value="">Выберите счет</option>
                 {accounts
-                  .filter((a) => !a.isArchived && a.id !== fromAccountId)
+                  .filter((a) => isSelectableAccount(a) && a.id !== fromAccountId)
                   .map((account) => (
                     <option key={account.id} value={account.id}>
                       {getAccountOptionLabel(account)} ({formatCurrency(Number(account.balance ?? account.initialBalance), account.currency)})
@@ -222,7 +254,7 @@ export const TransferForm: React.FC<TransferFormProps> = ({
               Отмена
             </Button>
             <Button type="submit" loading={loading} className="flex-1 bg-blue-600 hover:bg-blue-700">
-              Выполнить перевод
+              {isEdit ? 'Сохранить' : 'Выполнить перевод'}
             </Button>
           </div>
         </form>
