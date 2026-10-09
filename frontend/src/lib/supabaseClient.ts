@@ -1,10 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-
-declare global {
-  interface Window {
-    Capacitor?: unknown
-  }
-}
+import { isNativeApp } from './platform'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -75,7 +70,7 @@ const safeFetch: typeof fetch = (input, init) => {
   })
 }
 
-const isNative = typeof window !== 'undefined' && Boolean(window.Capacitor)
+const isNative = isNativeApp()
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

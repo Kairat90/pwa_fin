@@ -3,19 +3,14 @@ import { createRoot } from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
 import App from './App'
 import { initAndroidBackButton } from './lib/androidBackButton'
-
-declare global {
-  interface Window {
-    Capacitor?: unknown
-  }
-}
+import { isNativeApp } from './lib/platform'
 
 /**
  * CapacitorHttp копирует navigator.userAgent в headers.
  * Кириллица в UA (название приложения) ломает fetch на Android WebView.
  */
 function sanitizeCapacitorUserAgent() {
-  if (!window.Capacitor) {
+  if (!isNativeApp()) {
     return
   }
 
@@ -38,7 +33,7 @@ sanitizeCapacitorUserAgent()
 void initAndroidBackButton()
 
 /** Автообновление SW: при новой версии перезагружаем вкладку один раз */
-if (!window.Capacitor) {
+if (!isNativeApp()) {
   registerSW({
     immediate: true,
     onRegisteredSW(_swUrl, registration) {

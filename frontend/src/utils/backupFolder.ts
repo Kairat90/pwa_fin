@@ -1,3 +1,5 @@
+import { isNativeApp } from '../lib/platform'
+
 const DB_NAME = 'pwa_fin_backup_fs'
 const DB_VERSION = 1
 const STORE_NAME = 'handles'
@@ -24,7 +26,6 @@ type DirectoryHandleLike = {
 
 declare global {
   interface Window {
-    Capacitor?: unknown
     showDirectoryPicker?: (options?: {
       id?: string
       mode?: 'read' | 'readwrite'
@@ -107,7 +108,7 @@ export function isBackupFolderPickerSupported(): boolean {
     return false
   }
 
-  if (window.Capacitor) {
+  if (isNativeApp()) {
     return false
   }
 
