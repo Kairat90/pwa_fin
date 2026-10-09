@@ -346,6 +346,19 @@ const SettingsPage: React.FC = () => {
             </div>
           )}
 
+          {!canPickBackupFolder && (
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 flex items-start gap-2">
+              <FolderOpen className={`${ICON_16} text-gray-400 mt-0.5 shrink-0`} />
+              <div className="min-w-0">
+                <p className="font-medium text-gray-900 dark:text-gray-100">Папка сохранения</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Выбор папки доступен только на компьютере в Chrome, Edge или Яндекс.Браузере.
+                  Здесь бэкап сохраняется в загрузки.
+                </p>
+              </div>
+            </div>
+          )}
+
           <Button type="button" variant="outline" loading={backupLoading} onClick={() => void onCreateBackupNow()}>
             Создать бэкап сейчас
           </Button>
