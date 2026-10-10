@@ -7,6 +7,7 @@ import { supabaseApi, getErrorMessage } from '../api/supabase'
 import { useAuth } from '../context/AuthContext'
 import { Transaction } from '../types'
 import { resolveDefaultAccount } from '../utils/defaultAccount'
+import { getCategoryWithDescendantIds } from '../utils/categoryTree'
 import { TransactionList } from '../components/transactions/TransactionList'
 import { TransactionForm } from '../components/transactions/TransactionForm'
 import { TransactionDetailModal } from '../components/transactions/TransactionDetailModal'
@@ -33,14 +34,24 @@ const TransactionsPage: React.FC = () => {
     search: searchParams.get('search') || ''
   }
 
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => supabaseApi.categories.getAll()
+  })
+
+  // Выбранная категория учитывается вместе со всеми подкатегориями
+  const categoryIds =
+    filters.categoryId && categories ? getCategoryWithDescendantIds(categories, filters.categoryId) : undefined
+
   const { data: transactionsData, isLoading } = useQuery({
-    queryKey: ['transactions', filters],
+    queryKey: ['transactions', filters, categoryIds],
+    enabled: !filters.categoryId || Boolean(categories),
     queryFn: () =>
       supabaseApi.transactions.getAll({
         startDate: filters.startDate || undefined,
         endDate: filters.endDate || undefined,
         accountId: filters.accountId || undefined,
-        categoryId: filters.categoryId || undefined,
+        categoryIds,
         type: filters.type || undefined,
         search: filters.search || undefined,
         // Без дат и с поиском — шире выборка, чтобы искать по всем операциям
@@ -54,11 +65,6 @@ const TransactionsPage: React.FC = () => {
   })
 
   const defaultAccount = resolveDefaultAccount(accounts ?? [], defaultAccountId, defaultCurrency)
-
-  const { data: categories } = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => supabaseApi.categories.getAll()
-  })
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => supabaseApi.transactions.delete(id),

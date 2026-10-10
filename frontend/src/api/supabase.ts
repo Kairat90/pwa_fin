@@ -162,6 +162,8 @@ export type TransactionFilters = {
   endDate?: string
   accountId?: string
   categoryId?: string
+  /** Несколько категорий (например, родитель вместе с подкатегориями); приоритетнее categoryId */
+  categoryIds?: string[]
   type?: 'income' | 'expense'
   search?: string
   page?: number
@@ -631,7 +633,8 @@ export const supabaseApi = {
       if (filters?.startDate) query = query.gte('date', filters.startDate)
       if (filters?.endDate) query = query.lt('date', toExclusiveEndDate(filters.endDate))
       if (filters?.accountId) query = query.eq('account_id', filters.accountId)
-      if (filters?.categoryId) query = query.eq('category_id', filters.categoryId)
+      if (filters?.categoryIds?.length) query = query.in('category_id', filters.categoryIds)
+      else if (filters?.categoryId) query = query.eq('category_id', filters.categoryId)
       if (filters?.type === 'income') query = query.gt('amount', 0)
       if (filters?.type === 'expense') query = query.lt('amount', 0)
 

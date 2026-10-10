@@ -29,6 +29,12 @@ export function getDescendantIds(categories: Category[], parentId: string): Set<
   return ids
 }
 
+/** ID категории вместе со всеми её подкатегориями (для фильтров) */
+export function getCategoryWithDescendantIds(categories: Category[], categoryId: string): string[] {
+  const normalized = categories.map(normalizeCategory)
+  return [categoryId, ...getDescendantIds(normalized, categoryId)]
+}
+
 /** Категории, которые можно выбрать как родителя */
 export function getParentOptions(
   categories: Category[],
