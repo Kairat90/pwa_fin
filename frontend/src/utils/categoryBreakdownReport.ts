@@ -2,7 +2,7 @@ import { format, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { CategoryBreakdown } from '../api/supabase'
 import { Transaction } from '../types'
-import { compareMovements, sortMovements } from './movementOrder'
+import { compareMovementsChronological, sortMovementsChronological } from './movementOrder'
 
 /** Транзакции, попадающие в отчёт по типу (как в get_category_breakdown) */
 export function filterTransactionsByReportType(
@@ -74,7 +74,7 @@ export function getTransactionsForCategory(
 ): Transaction[] {
   return filterTransactionsByReportType(transactions, type)
     .filter((t) => (t.category?.id ?? 'uncategorized') === categoryId)
-    .sort(compareMovements)
+    .sort(compareMovementsChronological)
 }
 
 export type TransactionDateGroup = {
@@ -98,7 +98,7 @@ export function groupTransactionsByDate(transactions: Transaction[]): Transactio
   return Array.from(map.entries())
     .sort(([a], [b]) => (a < b ? 1 : a > b ? -1 : 0))
     .map(([dateKey, items]) => {
-      const sorted = sortMovements(items)
+      const sorted = sortMovementsChronological(items)
 
       return {
         dateKey,

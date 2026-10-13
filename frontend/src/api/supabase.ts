@@ -628,7 +628,7 @@ export const supabaseApi = {
         .from('transactions')
         .select('*, account:accounts(*), category:categories(*)', { count: 'exact' })
         .order('date', { ascending: false })
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
 
       if (filters?.startDate) query = query.gte('date', filters.startDate)
       if (filters?.endDate) query = query.lt('date', toExclusiveEndDate(filters.endDate))
@@ -691,7 +691,7 @@ export const supabaseApi = {
         .gte('date', startDate)
         .lt('date', toExclusiveEndDate(endDate))
         .order('date', { ascending: false })
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
         .limit(5000)
 
       if (accountIds && accountIds.length > 0) {
