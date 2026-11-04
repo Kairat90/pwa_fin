@@ -15,7 +15,8 @@ import {
 import { mapKeys, toSnakeCase } from '../utils/supabaseMappers'
 import { normalizeCategory } from '../utils/categoryTree'
 import { buildIlikeOrFilter, buildUuidEqOrFilter } from '../utils/postgrestFilter'
-import { restoreBackupData, validateBackup } from '../utils/restoreBackup'
+import { restoreBackupData } from '../utils/restoreBackup'
+import { BACKUP_TABLES, type BackupTableCounts, type BackupTableName } from '../utils/backupFile'
 import { addDays, endOfDay } from 'date-fns'
 import { toExclusiveEndDate } from '../utils/date'
 import { buildContactHistory, ContactHistoryData, ContactCurrencySummary, ContactPaymentEntry } from '../utils/contactHistory'
@@ -243,6 +244,53 @@ async function enrichDebts(raw: Record<string, unknown>[]): Promise<Debt[]> {
       remainingAmount: roundMoney(amount - paidAmount)
     }
   })
+}
+
+const BACKUP_PAGE_SIZE = 1000
+
+/**
+ * Читает таблицу целиком, страницами.
+ * PostgREST обрезает один select('*') лимитом Max Rows, поэтому без range бэкап молча теряет хвост.
+ */
+async function fetchEntireTable(table: BackupTableName): Promise<Record<string, unknown>[]> {
+  const rows: Record<string, unknown>[] = []
+  let from = 0
+  let total: number | null = null
+
+  for (;;) {
+    const { data, error, count } = await supabase
+      .from(table)
+      .select('*', { count: 'exact' })
+      .order('id', { ascending: true })
+      .range(from, from + BACKUP_PAGE_SIZE - 1)
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    if (total === null) {
+      if (typeof count !== 'number') {
+        throw new Error(`Не удалось посчитать строки таблицы ${table}`)
+      }
+
+      total = count
+    }
+
+    const batch = data ?? []
+    rows.push(...(batch as Record<string, unknown>[]))
+
+    if (batch.length === 0 || rows.length >= total) {
+      break
+    }
+
+    from += batch.length
+  }
+
+  if (rows.length !== total) {
+    throw new Error(`Бэкап таблицы ${table} неполный: получено ${rows.length} из ${total}`)
+  }
+
+  return rows
 }
 
 // =====================================================
@@ -1184,30 +1232,23 @@ export const supabaseApi = {
       return mapKeys<Forecast>(data)
     },
 
-    createBackup: async (): Promise<string> => {
-      const tables = [
-        'accounts',
-        'categories',
-        'transactions',
-        'transfers',
-        'scheduled_transactions',
-        'contacts',
-        'debts',
-        'debt_payments'
-      ] as const
-
+    createBackup: async (): Promise<{ json: string; counts: BackupTableCounts }> => {
       const backup: Record<string, unknown> = {
         version: '1.0.0',
         exportedAt: new Date().toISOString()
       }
+      const counts = {} as BackupTableCounts
 
-      for (const table of tables) {
-        const { data, error } = await supabase.from(table).select('*')
-        if (error) throw new Error(error.message)
-        backup[table] = data
+      for (const table of BACKUP_TABLES) {
+        const rows = await fetchEntireTable(table)
+        backup[table] = rows
+        counts[table] = rows.length
       }
 
-      return JSON.stringify(backup, null, 2)
+      return {
+        json: JSON.stringify(backup, null, 2),
+        counts
+      }
     },
 
     exportExcel: async (_startDate: string, _endDate: string): Promise<void> => {
@@ -1219,7 +1260,6 @@ export const supabaseApi = {
     },
 
     restoreBackup: async (data: unknown): Promise<void> => {
-      validateBackup(data)
       await restoreBackupData(data)
     }
   }

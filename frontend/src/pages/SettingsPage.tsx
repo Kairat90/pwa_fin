@@ -116,9 +116,9 @@ const SettingsPage: React.FC = () => {
   const onCreateBackupNow = async () => {
     try {
       setBackupLoading(true)
-      const method = await createAndExportBackup()
+      const result = await createAndExportBackup()
       setLastBackupLabel(formatLastBackupLabel())
-      toast.success(getBackupSuccessMessage(method))
+      toast.success(getBackupSuccessMessage(result.method, false, result.counts))
     } catch (error: unknown) {
       if (error instanceof Error && error.name === 'AbortError') {
         return

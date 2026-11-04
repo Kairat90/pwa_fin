@@ -1,11 +1,16 @@
 -- =====================================================
 -- PWA «Финансовый учёт» — SQL-функции (замена Node.js backend)
 -- =====================================================
+-- Не выполняйте этот файл поверх уже накатанных миграций:
+-- он перезапишет более поздние функции. Актуальная защита бэкапа,
+-- валюты долгов, баланса и RPC категорий — в
+-- migrations/20261104_sprint_a_data_safety.sql
+-- =====================================================
 --
 -- ИНСТРУКЦИЯ:
--- 1. Сначала выполните миграции схемы: 20241230_initial_schema.sql
--- 2. Затем вставьте ВЕСЬ этот файл в Supabase Dashboard → SQL Editor → Run
--- 3. Проверьте: Database → Functions (должно быть 17 функций)
+-- Рабочая база обновляется файлами из supabase/migrations/ по порядку,
+-- включая 20261104_sprint_a_data_safety.sql.
+-- Этот файл не вставлять в SQL Editor поверх миграций.
 --
 -- ПРИМЕЧАНИЕ:
 -- Сигнатуры функций согласованы с frontend/src/api/supabase.ts
@@ -68,6 +73,45 @@ GRANT EXECUTE ON FUNCTION public.current_user_owns_contact(UUID) TO authenticate
 -- 1. БАЗОВЫЕ ФИНАНСОВЫЕ ОПЕРАЦИИ
 -- #####################################################################
 
+-- Гард записи категорий. Полная версия и REVOKE — в миграции 20261104.
+CREATE OR REPLACE FUNCTION public.assert_category_write_user(p_user_id UUID)
+RETURNS VOID
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    jwt_role TEXT := COALESCE(NULLIF(current_setting('request.jwt.claim.role', true), ''), '');
+    claims TEXT := NULLIF(current_setting('request.jwt.claims', true), '');
+BEGIN
+    IF jwt_role = '' AND claims IS NOT NULL THEN
+        BEGIN
+            jwt_role := COALESCE(claims::jsonb ->> 'role', '');
+        EXCEPTION
+            WHEN OTHERS THEN
+                jwt_role := '';
+        END;
+    END IF;
+
+    IF jwt_role = 'anon' THEN
+        RAISE EXCEPTION 'Недостаточно прав';
+    END IF;
+
+    IF jwt_role = 'authenticated' OR auth.uid() IS NOT NULL THEN
+        IF auth.uid() IS NULL OR p_user_id IS DISTINCT FROM auth.uid() THEN
+            RAISE EXCEPTION 'Недопустимый user_id';
+        END IF;
+    ELSIF jwt_role NOT IN ('', 'service_role') THEN
+        RAISE EXCEPTION 'Недостаточно прав';
+    END IF;
+
+    IF p_user_id IS NULL THEN
+        RAISE EXCEPTION 'Пользователь не авторизован';
+    END IF;
+END;
+$$;
+
 -- =====================================================
 -- ФУНКЦИЯ: upsert_user_category (вставка/обновление категории)
 -- =====================================================
@@ -89,9 +133,7 @@ AS $$
 DECLARE
     v_id UUID;
 BEGIN
-    IF auth.uid() IS NOT NULL AND p_user_id IS DISTINCT FROM auth.uid() THEN
-        RAISE EXCEPTION 'Недопустимый user_id';
-    END IF;
+    PERFORM public.assert_category_write_user(p_user_id);
 
     IF p_parent_id IS NOT NULL AND NOT EXISTS (
         SELECT 1 FROM public.categories
@@ -213,13 +255,7 @@ DECLARE
     uid UUID := COALESCE(p_user_id, auth.uid());
     p UUID;
 BEGIN
-    IF uid IS NULL THEN
-        RAISE EXCEPTION 'Пользователь не авторизован';
-    END IF;
-
-    IF auth.uid() IS NOT NULL AND uid IS DISTINCT FROM auth.uid() THEN
-        RAISE EXCEPTION 'Недопустимый user_id';
-    END IF;
+    PERFORM public.assert_category_write_user(uid);
 
     -- Служебные (для долгов и переводов)
     PERFORM public.upsert_user_category(uid, 'Возврат долгов', 'income', NULL, 9000, '💰', '#10B981', TRUE);
@@ -353,6 +389,7 @@ BEGIN
             SELECT SUM(t.amount)
             FROM transactions t
             WHERE t.account_id = a.id
+            AND t.user_id = uid
             AND t.is_excluded_from_budget = FALSE
         ), 0)
     ), 0)
@@ -379,7 +416,7 @@ DECLARE
     uid UUID := auth.uid();
 BEGIN
     SELECT a.initial_balance + COALESCE((
-        SELECT SUM(t.amount) FROM transactions t WHERE t.account_id = a.id
+        SELECT SUM(t.amount) FROM transactions t WHERE t.account_id = a.id AND t.user_id = uid
     ), 0)
     INTO result
     FROM accounts a
@@ -791,6 +828,7 @@ BEGIN
     AND d.contact_id = create_debt.contact_id
     AND d.type = create_debt.type
     AND d.status IN ('active', 'overdue')
+    AND upper(btrim(COALESCE(d.currency, ''))) = upper(btrim(COALESCE(create_debt.currency, '')))
     LIMIT 1;
 
     IF FOUND THEN

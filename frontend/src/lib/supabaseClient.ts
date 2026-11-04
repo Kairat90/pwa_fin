@@ -83,6 +83,42 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   }
 })
 
+const PASSWORD_RECOVERY_FLAG = 'pwa_fin_password_recovery'
+
+function writeRecoveryFlag(value: '1' | null): void {
+  try {
+    if (value === null) {
+      sessionStorage.removeItem(PASSWORD_RECOVERY_FLAG)
+      return
+    }
+
+    sessionStorage.setItem(PASSWORD_RECOVERY_FLAG, value)
+  } catch {
+    // sessionStorage может быть закрыт — страница сброса тогда опирается на событие в этой же вкладке
+  }
+}
+
+/** Слушатель ставится сразу после клиента, чтобы не пропустить PASSWORD_RECOVERY до монтирования страницы */
+supabase.auth.onAuthStateChange((event) => {
+  if (event === 'PASSWORD_RECOVERY') {
+    writeRecoveryFlag('1')
+  }
+})
+
+/** Ссылка из письма уже обменяна на recovery-сессию */
+export function hasPasswordRecovery(): boolean {
+  try {
+    return sessionStorage.getItem(PASSWORD_RECOVERY_FLAG) === '1'
+  } catch {
+    return false
+  }
+}
+
+/** Сбрасывает право открыть форму нового пароля */
+export function clearPasswordRecovery(): void {
+  writeRecoveryFlag(null)
+}
+
 export type Database = {
   public: {
     Tables: {

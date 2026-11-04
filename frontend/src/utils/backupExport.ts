@@ -1,5 +1,6 @@
 import { format } from 'date-fns'
 import { supabaseApi } from '../api/supabase'
+import { formatBackupExportSummary, type BackupTableCounts } from './backupFile'
 import { markBackupCompleted } from './backupSchedule'
 import { writeBackupToFolder } from './backupFolder'
 
@@ -67,31 +68,50 @@ export async function exportBackupJson(json: string, date = new Date()): Promise
   return 'download'
 }
 
+export interface BackupExportResult {
+  method: BackupExportMethod
+  counts: BackupTableCounts
+}
+
 /** Создать бэкап на сервере и сохранить локально */
-export async function createAndExportBackup(): Promise<BackupExportMethod> {
-  const json = await supabaseApi.reports.createBackup()
+export async function createAndExportBackup(): Promise<BackupExportResult> {
+  const { json, counts } = await supabaseApi.reports.createBackup()
   const method = await exportBackupJson(json)
   markBackupCompleted()
 
-  return method
+  return { method, counts }
 }
 
-/** Текст toast по способу сохранения */
-export function getBackupSuccessMessage(method: BackupExportMethod, auto = false): string {
+/** Текст toast по способу сохранения и числу выгруженных строк */
+export function getBackupSuccessMessage(
+  method: BackupExportMethod,
+  auto = false,
+  counts?: BackupTableCounts
+): string {
   const prefix = auto ? 'Автобэкап' : 'Бэкап'
+  let message: string
 
   switch (method) {
     case 'directory':
-      return `${prefix} сохранён в выбранную папку`
+      message = `${prefix} сохранён в выбранную папку`
+      break
     case 'share':
-      return auto
+      message = auto
         ? 'Автобэкап готов — выберите, куда сохранить'
         : 'Бэкап готов — выберите приложение для сохранения'
+      break
     case 'download':
-      return auto ? 'Автобэкап сохранён в файл' : 'Бэкап сохранён в файл'
+      message = auto ? 'Автобэкап сохранён в файл' : 'Бэкап сохранён в файл'
+      break
     default: {
       const _exhaustive: never = method
       return _exhaustive
     }
   }
+
+  if (!counts) {
+    return message
+  }
+
+  return `${message}. Выгружено: ${formatBackupExportSummary(counts)}`
 }

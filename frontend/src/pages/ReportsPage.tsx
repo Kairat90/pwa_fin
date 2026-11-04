@@ -26,7 +26,7 @@ import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { cn } from '../utils/cn'
-import { MAX_BACKUP_FILE_BYTES } from '../utils/restoreBackup'
+import { formatBackupPreview, validateBackup, MAX_BACKUP_FILE_BYTES } from '../utils/backupFile'
 import { createAndExportBackup, getBackupSuccessMessage } from '../utils/backupExport'
 import { formatLastBackupLabel } from '../utils/backupSchedule'
 
@@ -115,8 +115,8 @@ const ReportsPage: React.FC = () => {
   const handleBackup = async () => {
     try {
       setBackupLoading(true)
-      const method = await createAndExportBackup()
-      toast.success(getBackupSuccessMessage(method))
+      const result = await createAndExportBackup()
+      toast.success(getBackupSuccessMessage(result.method, false, result.counts))
     } catch (error: unknown) {
       if (error instanceof Error && error.name === 'AbortError') {
         return
@@ -129,14 +129,6 @@ const ReportsPage: React.FC = () => {
   }
 
   const handleRestore = () => {
-    if (
-      !window.confirm(
-        'Все текущие данные (счета, категории, транзакции, долги и т.д.) будут удалены и заменены содержимым бэкапа. Продолжить?'
-      )
-    ) {
-      return
-    }
-
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = '.json,application/json'
@@ -150,10 +142,24 @@ const ReportsPage: React.FC = () => {
       }
 
       try {
-        setRestoreLoading(true)
         const text = await file.text()
-        const data = JSON.parse(text)
-        await supabaseApi.reports.restoreBackup(data)
+        let data: unknown
+
+        try {
+          data = JSON.parse(text) as unknown
+        } catch {
+          toast.error('Файл не является JSON')
+          return
+        }
+
+        const backup = validateBackup(data)
+
+        if (!window.confirm(formatBackupPreview(backup))) {
+          return
+        }
+
+        setRestoreLoading(true)
+        await supabaseApi.reports.restoreBackup(backup)
         toast.success('Бэкап восстановлен')
         queryClient.invalidateQueries()
         window.location.reload()

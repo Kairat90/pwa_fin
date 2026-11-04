@@ -56,8 +56,8 @@ export function useBackupScheduler(isAuthenticated: boolean) {
     const runAutoBackup = async () => {
       try {
         setBackupLoading(true)
-        const method = await createAndExportBackup()
-        toast.success(getBackupSuccessMessage(method, true))
+        const result = await createAndExportBackup()
+        toast.success(getBackupSuccessMessage(result.method, true, result.counts))
         sessionStorage.removeItem(SESSION_DISMISS_KEY)
         setShowReminder(false)
       } catch (error: unknown) {
@@ -84,9 +84,9 @@ export function useBackupScheduler(isAuthenticated: boolean) {
   const runBackup = useCallback(async () => {
     try {
       setBackupLoading(true)
-      const method = await createAndExportBackup()
+      const result = await createAndExportBackup()
       sessionStorage.removeItem(SESSION_DISMISS_KEY)
-      toast.success(getBackupSuccessMessage(method))
+      toast.success(getBackupSuccessMessage(result.method, false, result.counts))
       setShowReminder(false)
     } catch (error: unknown) {
       if (error instanceof Error && error.name === 'AbortError') {

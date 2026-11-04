@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
 import { Lock, KeyRound } from 'lucide-react'
-import { supabase } from '../lib/supabaseClient'
+import { clearPasswordRecovery, hasPasswordRecovery, supabase } from '../lib/supabaseClient'
 import { supabaseApi, getErrorMessage } from '../api/supabase'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -40,29 +40,37 @@ const ResetPasswordPage: React.FC = () => {
   useEffect(() => {
     let cancelled = false
 
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-
-      if (!cancelled) {
-        setCanReset(!!session)
-        setChecking(false)
+    const allowReset = () => {
+      if (cancelled) {
+        return
       }
+
+      setCanReset(true)
+      setChecking(false)
     }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY' || session) {
-        setCanReset(true)
-        setChecking(false)
+    if (hasPasswordRecovery()) {
+      allowReset()
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        allowReset()
       }
     })
 
-    void checkSession()
-
     const timeout = window.setTimeout(() => {
-      if (!cancelled) {
-        setChecking(false)
+      if (cancelled) {
+        return
       }
-    }, 2500)
+
+      if (hasPasswordRecovery()) {
+        allowReset()
+        return
+      }
+
+      setChecking(false)
+    }, 1500)
 
     return () => {
       cancelled = true
@@ -75,7 +83,17 @@ const ResetPasswordPage: React.FC = () => {
     try {
       setLoading(true)
       await supabaseApi.auth.changePassword(data.password)
-      await supabaseApi.auth.signOut()
+
+      try {
+        await supabaseApi.auth.signOut('global')
+      } catch (error: unknown) {
+        clearPasswordRecovery()
+        toast.error(getErrorMessage(error) || 'Пароль изменён, но другие сеансы не удалось завершить')
+        navigate('/login', { replace: true })
+        return
+      }
+
+      clearPasswordRecovery()
       toast.success('Пароль обновлён. Войдите с новым паролем.')
       navigate('/login', { replace: true })
     } catch (error: unknown) {
