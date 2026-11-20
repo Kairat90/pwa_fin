@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { Home, Receipt, Users, PieChart, Menu } from 'lucide-react'
+import { Home, Receipt, Users, Repeat, Menu } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import { ICON_16 } from '../../utils/iconSize'
 import { MobileMoreSheet } from './MobileMoreSheet'
@@ -9,10 +9,10 @@ const mainLinks = [
   { to: '/dashboard', icon: Home, label: 'Главная' },
   { to: '/transactions', icon: Receipt, label: 'Траты' },
   { to: '/debts', icon: Users, label: 'Долги' },
-  { to: '/reports', icon: PieChart, label: 'Отчёты' }
+  { to: '/transfers', icon: Repeat, label: 'Переводы' }
 ]
 
-const morePaths = ['/accounts', '/categories', '/transfers', '/scheduled', '/contacts', '/settings', '/help']
+const morePaths = ['/accounts', '/categories', '/reports', '/scheduled', '/contacts', '/settings', '/help']
 
 export function MobileBottomNav() {
   const [showMore, setShowMore] = useState(false)

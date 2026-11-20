@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import {
   Wallet,
   FolderOpen,
-  Repeat,
+  PieChart,
   Clock,
   Contact,
   X,
@@ -21,7 +21,7 @@ interface MobileMoreSheetProps {
 const moreLinks = [
   { to: '/accounts', icon: Wallet, label: 'Счета' },
   { to: '/categories', icon: FolderOpen, label: 'Категории' },
-  { to: '/transfers', icon: Repeat, label: 'Переводы' },
+  { to: '/reports', icon: PieChart, label: 'Отчёты' },
   { to: '/scheduled', icon: Clock, label: 'Планировщик' },
   { to: '/contacts', icon: Contact, label: 'Контакты' },
   { to: '/settings', icon: Settings, label: 'Настройки' },
