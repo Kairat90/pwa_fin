@@ -160,11 +160,11 @@ export const TransferForm: React.FC<TransferFormProps> = ({
         </div>
       ) : (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Со счета</label>
               <select
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full max-w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 {...register('fromAccountId')}
               >
                 <option value="">Выберите счет</option>
@@ -182,7 +182,7 @@ export const TransferForm: React.FC<TransferFormProps> = ({
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">На счет</label>
               <select
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full max-w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 {...register('toAccountId')}
               >
                 <option value="">Выберите счет</option>
@@ -200,7 +200,7 @@ export const TransferForm: React.FC<TransferFormProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input
               label="Сумма перевода"
               type="number"

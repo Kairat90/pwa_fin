@@ -91,7 +91,7 @@ export const TransferDetailModal: React.FC<TransferDetailModalProps> = ({
           </div>
         )}
 
-        <div className="flex gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+        <div className="flex flex-col gap-3 border-t border-gray-100 pt-4 dark:border-gray-800 sm:flex-row">
           <Button
             type="button"
             variant="secondary"

@@ -113,30 +113,36 @@ const TransfersPage: React.FC = () => {
               }}
               className="bg-white rounded-xl border p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
             >
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <div className="flex items-center gap-4 flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="flex min-w-0 flex-1 flex-col gap-2 md:flex-row md:items-center md:gap-4">
+                  <div className="flex min-w-0 items-center gap-2">
                     <AccountIcon
                       icon={transfer.fromAccount?.icon}
                       color={transfer.fromAccount?.color}
                       type={transfer.fromAccount?.type}
                       size="sm"
                     />
-                    <span className="font-medium">{transfer.fromAccount?.name || 'Удален'}</span>
+                    <div className="min-w-0">
+                      <p className="text-xs text-gray-400 md:hidden">Откуда</p>
+                      <p className="truncate font-medium text-gray-900">{transfer.fromAccount?.name || 'Удален'}</p>
+                    </div>
                   </div>
-                  <ArrowRight className={cn(ICON_16, 'text-gray-400 flex-shrink-0')} />
-                  <div className="flex items-center gap-2">
+                  <ArrowRight className={cn(ICON_16, 'shrink-0 rotate-90 text-gray-400 md:rotate-0')} />
+                  <div className="flex min-w-0 items-center gap-2">
                     <AccountIcon
                       icon={transfer.toAccount?.icon}
                       color={transfer.toAccount?.color}
                       type={transfer.toAccount?.type}
                       size="sm"
                     />
-                    <span className="font-medium">{transfer.toAccount?.name || 'Удален'}</span>
+                    <div className="min-w-0">
+                      <p className="text-xs text-gray-400 md:hidden">Куда</p>
+                      <p className="truncate font-medium text-gray-900">{transfer.toAccount?.name || 'Удален'}</p>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
+                <div className="flex items-center justify-between gap-3 border-t border-gray-100 pt-3 md:justify-end md:border-0 md:pt-0">
+                  <div className="min-w-0 text-left md:text-right">
                     <p className="font-bold text-gray-900">
                       {formatCurrency(Number(transfer.amount), transfer.fromAccount?.currency)}
                     </p>
@@ -149,7 +155,7 @@ const TransfersPage: React.FC = () => {
                       {format(new Date(transfer.date), 'dd MMM yyyy', { locale: ru })}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1" onKeyDown={(e) => e.stopPropagation()}>
+                  <div className="flex shrink-0 items-center gap-1" onKeyDown={(e) => e.stopPropagation()}>
                     <button
                       type="button"
                       onClick={(e) => {
@@ -176,7 +182,7 @@ const TransfersPage: React.FC = () => {
                 </div>
               </div>
               {transfer.note && (
-                <p className="text-sm text-gray-500 mt-2">{transfer.note}</p>
+                <p className="mt-2 break-words text-sm text-gray-500">{transfer.note}</p>
               )}
             </div>
           ))}

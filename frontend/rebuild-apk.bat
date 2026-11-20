@@ -2,14 +2,12 @@
 chcp 65001 >nul
 cd /d "%~dp0"
 
-REM --- Java: Android Studio JBR / common JDKs ---
+REM --- Java 21. Studio JBR 25 несовместим с Gradle 8.14 (class file 69). ---
 if not defined JAVA_HOME (
-  if exist "C:\Program Files\Android\Android Studio\jbr" (
-    set "JAVA_HOME=C:\Program Files\Android\Android Studio\jbr"
-  ) else if exist "%LOCALAPPDATA%\Programs\Android Studio\jbr" (
-    set "JAVA_HOME=%LOCALAPPDATA%\Programs\Android Studio\jbr"
-  ) else if exist "C:\Program Files\Android\Android Studio\jre" (
-    set "JAVA_HOME=C:\Program Files\Android\Android Studio\jre"
+  if exist "%USERPROFILE%\.jdks\jbr-21.0.11" (
+    set "JAVA_HOME=%USERPROFILE%\.jdks\jbr-21.0.11"
+  ) else if exist "C:\Program Files\Java\jdk-21" (
+    set "JAVA_HOME=C:\Program Files\Java\jdk-21"
   ) else if exist "C:\Program Files\Java\jdk-17" (
     set "JAVA_HOME=C:\Program Files\Java\jdk-17"
   )
